@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ResilienceProvider } from "@/components/ResilienceProvider";
 import { PreferenciasUIProvider } from "@/components/providers/preferencias-init";
+import { AuthProvider } from "@/components/providers/auth-provider";
 import { ThemeProvider } from "next-themes";
 
 const geistSans = Geist({
@@ -36,11 +37,13 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-          <PreferenciasUIProvider>
-            <ResilienceProvider>
-              {children}
-            </ResilienceProvider>
-          </PreferenciasUIProvider>
+          <AuthProvider>
+            <PreferenciasUIProvider>
+              <ResilienceProvider>
+                {children}
+              </ResilienceProvider>
+            </PreferenciasUIProvider>
+          </AuthProvider>
           <Toaster />
         </ThemeProvider>
       </body>
