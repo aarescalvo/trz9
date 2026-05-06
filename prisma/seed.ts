@@ -227,7 +227,7 @@ async function limpiarBaseDeDatos() {
         }
       }
       // Reactivar FK
-      await prisma.$executeRawUnsafe('SET session_replication_role = \'DEFAULT\'')
+      await prisma.$executeRawUnsafe('SET session_replication_role = \'origin\'')
       console.log('  ⚙️  Foreign keys reactivadas')
     } else {
       // SQLite: DELETE individual
