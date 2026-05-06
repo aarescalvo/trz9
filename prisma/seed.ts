@@ -1,621 +1,754 @@
-// Script para crear datos de prueba
-// Ejecutar con: bun run db:seed
+/**
+ * Seed Script: Datos Reales de Solemar Alimentaria
+ * 
+ * ELIMINA todos los datos existentes y carga SOLAMENTE los datos reales
+ * provenientes de Trazasole_Datos_Consolidados.xlsx (archivos JSON en seed-data/).
+ * 
+ * Ejecutar con: bun run db:seed
+ */
 
-import { PrismaClient, Especie, RolOperador, TipoAnimal, TipoProductor } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import {
+  PrismaClient,
+  Especie,
+  RolOperador,
+  TipoAnimal,
+  EstadoTropa,
+  EstadoAnimal,
+  EstadoRomaneo,
+  EstadoFactura,
+  TipoCamara,
+} from '@prisma/client'
+import * as path from 'path'
+import * as fs from 'fs'
 
 const prisma = new PrismaClient()
 
-async function main() {
-  console.log('🌱 Iniciando seed de datos de prueba...')
+// ─── Helpers ────────────────────────────────────────────────────────────────────
 
-  // 1. Crear operadores
-  console.log('📝 Creando operadores...')
-  const passwordHash = await bcrypt.hash('admin123', 10)
-  
-  const admin = await prisma.operador.upsert({
-    where: { usuario: 'admin' },
-    update: {},
-    create: {
-      nombre: 'Administrador',
-      usuario: 'admin',
-      password: passwordHash,
-      pin: '1234',
-      rol: RolOperador.ADMINISTRADOR,
-      email: 'admin@solemar.com.ar',
-      activo: true,
-      puedePesajeCamiones: true,
-      puedePesajeIndividual: true,
-      puedeMovimientoHacienda: true,
-      puedeListaFaena: true,
-      puedeRomaneo: true,
-      puedeIngresoCajon: true,
-      puedeMenudencias: true,
-      puedeStock: true,
-      puedeReportes: true,
-      puedeCCIR: true,
-      puedeFacturacion: true,
-      puedeConfiguracion: true
-    }
-  })
-
-  const operador1 = await prisma.operador.upsert({
-    where: { usuario: 'balanza' },
-    update: {},
-    create: {
-      nombre: 'Juan Pérez',
-      usuario: 'balanza',
-      password: await bcrypt.hash('balanza123', 10),
-      pin: '1111',
-      rol: RolOperador.OPERADOR,
-      activo: true,
-      puedePesajeCamiones: true,
-      puedePesajeIndividual: true,
-      puedeMovimientoHacienda: true,
-      puedeListaFaena: false,
-      puedeRomaneo: false,
-      puedeIngresoCajon: false,
-      puedeMenudencias: false,
-      puedeStock: false,
-      puedeReportes: false,
-      puedeCCIR: false,
-      puedeFacturacion: false,
-      puedeConfiguracion: false
-    }
-  })
-
-  const supervisor = await prisma.operador.upsert({
-    where: { usuario: 'supervisor' },
-    update: {},
-    create: {
-      nombre: 'María García',
-      usuario: 'supervisor',
-      password: await bcrypt.hash('super123', 10),
-      pin: '2222',
-      rol: RolOperador.SUPERVISOR,
-      email: 'maria@solemar.com.ar',
-      activo: true,
-      puedePesajeCamiones: true,
-      puedePesajeIndividual: true,
-      puedeMovimientoHacienda: true,
-      puedeListaFaena: true,
-      puedeIngresoCajon: true,
-      puedeRomaneo: true,
-      puedeMenudencias: true,
-      puedeStock: true,
-      puedeReportes: true,
-      puedeCCIR: true,
-      puedeFacturacion: false,
-      puedeConfiguracion: false
-    }
-  })
-
-  console.log(`   ✓ Operadores creados: ${admin.nombre}, ${operador1.nombre}, ${supervisor.nombre}`)
-
-  // 2. Crear transportistas
-  console.log('🚛 Creando transportistas...')
-  await prisma.transportista.upsert({
-    where: { id: 'trans-001' },
-    update: {},
-    create: {
-      id: 'trans-001',
-      nombre: 'Transporte Rodríguez SRL',
-      cuit: '20-12345678-1',
-      direccion: 'Ruta 9 KM 45, Córdoba',
-      telefono: '0351-4567890'
-    }
-  })
-  
-  await prisma.transportista.upsert({
-    where: { id: 'trans-002' },
-    update: {},
-    create: {
-      id: 'trans-002',
-      nombre: 'Logística del Centro',
-      cuit: '20-87654321-9',
-      direccion: 'Av. Colón 1234, Santa Fe',
-      telefono: '0342-1234567'
-    }
-  })
-  
-  await prisma.transportista.upsert({
-    where: { id: 'trans-003' },
-    update: {},
-    create: {
-      id: 'trans-003',
-      nombre: 'Transportes Sur',
-      cuit: '20-11223344-5',
-      direccion: 'Ruta 8 KM 200, Buenos Aires',
-      telefono: '011-45556666'
-    }
-  })
-  console.log(`   ✓ 3 transportistas creados`)
-
-  // 3. Crear usuarios de faena (matarifes) como Cliente
-  console.log('👥 Creando clientes (usuarios de faena)...')
-  
-  const uf1 = await prisma.cliente.upsert({
-    where: { id: 'uf-001' },
-    update: {},
-    create: {
-      id: 'uf-001',
-      nombre: 'Juan Carlos Matarife',
-      dni: '12345678',
-      cuit: '20123456789',
-      matricula: 'MAT-001',
-      direccion: 'Parque Industrial, Córdoba',
-      localidad: 'Córdoba',
-      provincia: 'Córdoba',
-      telefono: '0351-7778888',
-      email: 'juan.matarife@email.com',
-      condicionIva: 'RI',
-      tipo: 'USUARIO_FAENA'
-    }
-  })
-  
-  const uf2 = await prisma.cliente.upsert({
-    where: { id: 'uf-002' },
-    update: {},
-    create: {
-      id: 'uf-002',
-      nombre: 'José Rodríguez',
-      dni: '23456789',
-      cuit: '20234567890',
-      matricula: 'MAT-002',
-      direccion: 'Av. San Martín 456, Villa María',
-      localidad: 'Villa María',
-      provincia: 'Córdoba',
-      telefono: '0353-9990000',
-      email: 'jose.rodriguez@email.com',
-      condicionIva: 'MT',
-      tipo: 'USUARIO_FAENA'
-    }
-  })
-  
-  const uf3 = await prisma.cliente.upsert({
-    where: { id: 'uf-003' },
-    update: {},
-    create: {
-      id: 'uf-003',
-      nombre: 'María González',
-      dni: '34567890',
-      cuit: '20345678901',
-      matricula: 'MAT-003',
-      direccion: 'Centro Comercial, Río Cuarto',
-      localidad: 'Río Cuarto',
-      provincia: 'Córdoba',
-      telefono: '0358-1112222',
-      telefonoAlternativo: '0358-1113333',
-      email: 'maria.gonzalez@email.com',
-      razonSocial: 'Supermercados del Valle',
-      condicionIva: 'RI',
-      tipo: 'USUARIO_FAENA'
-    }
-  })
-  
-  const uf4 = await prisma.cliente.upsert({
-    where: { id: 'uf-004' },
-    update: {},
-    create: {
-      id: 'uf-004',
-      nombre: 'Pedro Fernández',
-      dni: '45678901',
-      cuit: '20456789012',
-      matricula: 'MAT-004',
-      direccion: 'Puerto de Buenos Aires',
-      localidad: 'Buenos Aires',
-      provincia: 'Buenos Aires',
-      telefono: '011-44445555',
-      email: 'pedro.fernandez@email.com',
-      razonSocial: 'Exportadora Pampeana SA',
-      condicionIva: 'RI',
-      tipo: 'USUARIO_FAENA'
-    }
-  })
-  console.log(`   ✓ 4 usuarios de faena creados`)
-
-  // 3b. Crear productores/consignatarios (tabla ProductorConsignatario)
-  console.log('🤠 Creando productores/consignatarios...')
-  
-  const prod1 = await prisma.productorConsignatario.upsert({
-    where: { id: 'prod-001' },
-    update: {},
-    create: {
-      id: 'prod-001',
-      nombre: 'Estancia La Esperanza',
-      cuit: '30-11111111-1',
-      direccion: 'Campo La Esperanza, Ruta 9 KM 150',
-      telefono: '0351-1112222',
-      email: 'esperanza@campo.com.ar',
-      tipo: TipoProductor.PRODUCTOR,
-      numeroRenspa: '12.345.6.78901/12',
-      localidad: 'Río Segundo',
-      provincia: 'Córdoba'
-    }
-  })
-  
-  const prod2 = await prisma.productorConsignatario.upsert({
-    where: { id: 'prod-002' },
-    update: {},
-    create: {
-      id: 'prod-002',
-      nombre: 'Ganadera del Norte SA',
-      cuit: '30-22222222-2',
-      direccion: 'Ruta 34 KM 500, Santiago del Estero',
-      telefono: '0385-3334444',
-      email: 'contacto@ganadera-norte.com.ar',
-      tipo: TipoProductor.PRODUCTOR,
-      numeroRenspa: '22.345.6.78902/22',
-      localidad: 'Santiago del Estero',
-      provincia: 'Santiago del Estero'
-    }
-  })
-  
-  const prod3 = await prisma.productorConsignatario.upsert({
-    where: { id: 'prod-003' },
-    update: {},
-    create: {
-      id: 'prod-003',
-      nombre: 'Los Alamos Agropecuaria',
-      cuit: '30-33333333-3',
-      direccion: 'Campo Los Álamos, Ruta 158 KM 80',
-      telefono: '0343-5556666',
-      tipo: TipoProductor.PRODUCTOR,
-      localidad: 'Esquina',
-      provincia: 'Córdoba'
-    }
-  })
-  console.log(`   ✓ 3 productores/consignatarios creados`)
-
-  // 4. Crear corrales
-  console.log('🏠 Creando corrales...')
-  const corralA = await prisma.corral.upsert({
-    where: { id: 'corral-a' },
-    update: {},
-    create: { id: 'corral-a', nombre: 'Corral A', capacidad: 50, observaciones: 'Corral principal bovinos', stockBovinos: 0, stockEquinos: 0 }
-  })
-  const corralB = await prisma.corral.upsert({
-    where: { id: 'corral-b' },
-    update: {},
-    create: { id: 'corral-b', nombre: 'Corral B', capacidad: 40, observaciones: 'Bovinos', stockBovinos: 0, stockEquinos: 0 }
-  })
-  const corralC = await prisma.corral.upsert({
-    where: { id: 'corral-c' },
-    update: {},
-    create: { id: 'corral-c', nombre: 'Corral C', capacidad: 30, observaciones: 'Equinos', stockBovinos: 0, stockEquinos: 0 }
-  })
-  const corralD = await prisma.corral.upsert({
-    where: { id: 'corral-d' },
-    update: {},
-    create: { id: 'corral-d', nombre: 'Corral D', capacidad: 60, observaciones: 'Corral grande', stockBovinos: 0, stockEquinos: 0 }
-  })
-  const corralE1 = await prisma.corral.upsert({
-    where: { id: 'corral-e1' },
-    update: {},
-    create: { id: 'corral-e1', nombre: 'Corral E1', capacidad: 25, observaciones: 'Aislamiento', stockBovinos: 0, stockEquinos: 0 }
-  })
-  const corralE2 = await prisma.corral.upsert({
-    where: { id: 'corral-e2' },
-    update: {},
-    create: { id: 'corral-e2', nombre: 'Corral E2', capacidad: 25, observaciones: 'Aislamiento', stockBovinos: 0, stockEquinos: 0 }
-  })
-  console.log(`   ✓ 6 corrales creados`)
-
-  // 5. Crear tipificadores
-  console.log('🔬 Creando tipificadores...')
-  await prisma.tipificador.upsert({
-    where: { matricula: 'TIP-001' },
-    update: {},
-    create: { nombre: 'Carlos', apellido: 'López', numero: '1', matricula: 'TIP-001', activo: true }
-  })
-  await prisma.tipificador.upsert({
-    where: { matricula: 'TIP-002' },
-    update: {},
-    create: { nombre: 'Roberto', apellido: 'Fernández', numero: '2', matricula: 'TIP-002', activo: true }
-  })
-  await prisma.tipificador.upsert({
-    where: { matricula: 'TIP-003' },
-    update: {},
-    create: { nombre: 'Ana', apellido: 'Martínez', numero: '3', matricula: 'TIP-003', activo: true }
-  })
-  console.log(`   ✓ 3 tipificadores creados`)
-
-  // 6. Crear cámaras
-  console.log('❄️ Creando cámaras...')
-  await prisma.camara.upsert({
-    where: { nombre: 'Cámara Faena 1' },
-    update: {},
-    create: { nombre: 'Cámara Faena 1', tipo: 'FAENA', capacidad: 200, observaciones: 'Medias reses frescas' }
-  })
-  await prisma.camara.upsert({
-    where: { nombre: 'Cámara Faena 2' },
-    update: {},
-    create: { nombre: 'Cámara Faena 2', tipo: 'FAENA', capacidad: 150, observaciones: 'Medias reses frescas' }
-  })
-  await prisma.camara.upsert({
-    where: { nombre: 'Cámara Congelados' },
-    update: {},
-    create: { nombre: 'Cámara Congelados', tipo: 'CUARTEO', capacidad: 10000, observaciones: 'Productos congelados - capacidad en kg' }
-  })
-  await prisma.camara.upsert({
-    where: { nombre: 'Depósito Menudencias' },
-    update: {},
-    create: { nombre: 'Depósito Menudencias', tipo: 'DEPOSITO', capacidad: 5000, observaciones: 'Menudencias en kg' }
-  })
-  console.log(`   ✓ 4 cámaras creadas`)
-
-  // 7. Crear tropas con animales ya pesados individualmente
-  console.log('🐄 Creando tropas con pesaje individual completo...')
-  const year = new Date().getFullYear()
-  
-  // Tropa 1 - PESADA con 20 animales
-  const tropa1 = await prisma.tropa.upsert({
-    where: { codigo: `B ${year} 0001` },
-    update: {},
-    create: {
-      codigo: `B ${year} 0001`,
-      numero: 1,
-      productorId: prod1.id,
-      usuarioFaenaId: uf1.id,
-      especie: Especie.BOVINO,
-      dte: `DTE-${year}-0001`,
-      guia: `GUIA-${year}-001`,
-      cantidadCabezas: 20,
-      corralId: corralA.id,
-      estado: 'PESADO',
-      pesoBruto: 15000,
-      pesoTara: 10000,
-      pesoNeto: 5000,
-      pesoTotalIndividual: 9450,
-      operadorId: admin.id
-    }
-  })
-
-  await prisma.tropaAnimalCantidad.upsert({
-    where: { tropaId_tipoAnimal: { tropaId: tropa1.id, tipoAnimal: 'NO' } },
-    update: { cantidad: 10 },
-    create: { tropaId: tropa1.id, tipoAnimal: 'NO', cantidad: 10 }
-  })
-  await prisma.tropaAnimalCantidad.upsert({
-    where: { tropaId_tipoAnimal: { tropaId: tropa1.id, tipoAnimal: 'VA' } },
-    update: { cantidad: 10 },
-    create: { tropaId: tropa1.id, tipoAnimal: 'VA', cantidad: 10 }
-  })
-
-  const animalesTropa1: { tipo: TipoAnimal; peso: number; raza: string }[] = [
-    { tipo: 'NO', peso: 485, raza: 'Angus' }, { tipo: 'NO', peso: 510, raza: 'Angus' },
-    { tipo: 'NO', peso: 495, raza: 'Hereford' }, { tipo: 'NO', peso: 520, raza: 'Angus' },
-    { tipo: 'NO', peso: 478, raza: 'Brangus' }, { tipo: 'NO', peso: 502, raza: 'Angus' },
-    { tipo: 'NO', peso: 488, raza: 'Hereford' }, { tipo: 'NO', peso: 515, raza: 'Angus' },
-    { tipo: 'NO', peso: 492, raza: 'Brangus' }, { tipo: 'NO', peso: 505, raza: 'Angus' },
-    { tipo: 'VA', peso: 420, raza: 'Angus' }, { tipo: 'VA', peso: 435, raza: 'Hereford' },
-    { tipo: 'VA', peso: 410, raza: 'Angus' }, { tipo: 'VA', peso: 445, raza: 'Brangus' },
-    { tipo: 'VA', peso: 428, raza: 'Angus' }, { tipo: 'VA', peso: 440, raza: 'Hereford' },
-    { tipo: 'VA', peso: 418, raza: 'Angus' }, { tipo: 'VA', peso: 452, raza: 'Brangus' },
-    { tipo: 'VA', peso: 425, raza: 'Angus' }, { tipo: 'VA', peso: 437, raza: 'Hereford' },
-  ]
-
-  for (let i = 0; i < animalesTropa1.length; i++) {
-    const a = animalesTropa1[i]
-    const codigo = `B${year}0001-${String(i + 1).padStart(3, '0')}`
-    const animal = await prisma.animal.upsert({
-      where: { codigo },
-      update: {},
-      create: {
-        tropaId: tropa1.id, numero: i + 1, codigo,
-        tipoAnimal: a.tipo, raza: a.raza,
-        pesoVivo: a.peso, estado: 'PESADO', corralId: corralA.id
-      }
-    })
-    await prisma.pesajeIndividual.upsert({
-      where: { animalId: animal.id },
-      update: {},
-      create: { animalId: animal.id, peso: a.peso, operadorId: admin.id }
-    })
+function readJsonFile<T>(filename: string): T[] {
+  const filePath = path.join(__dirname, 'seed-data', filename)
+  if (!fs.existsSync(filePath)) {
+    console.warn(`  ⚠️  Archivo no encontrado: ${filename}`)
+    return []
   }
+  const raw = fs.readFileSync(filePath, 'utf-8')
+  return JSON.parse(raw) as T[]
+}
 
-  // Tropa 2 - PESADA con 15 animales
-  const tropa2 = await prisma.tropa.upsert({
-    where: { codigo: `B ${year} 0002` },
-    update: {},
-    create: {
-      codigo: `B ${year} 0002`, numero: 2,
-      productorId: prod2.id, usuarioFaenaId: uf2.id,
-      especie: Especie.BOVINO,
-      dte: `DTE-${year}-0002`, guia: `GUIA-${year}-002`,
-      cantidadCabezas: 15, corralId: corralB.id,
-      estado: 'PESADO', pesoBruto: 12000, pesoTara: 8000,
-      pesoNeto: 4000, pesoTotalIndividual: 7230, operadorId: admin.id
-    }
-  })
+function logHeader(title: string) {
+  console.log(`\n${'═'.repeat(60)}`)
+  console.log(`  ${title}`)
+  console.log(`${'═'.repeat(60)}`)
+}
 
-  await prisma.tropaAnimalCantidad.upsert({
-    where: { tropaId_tipoAnimal: { tropaId: tropa2.id, tipoAnimal: 'VQ' } },
-    update: { cantidad: 8 },
-    create: { tropaId: tropa2.id, tipoAnimal: 'VQ', cantidad: 8 }
-  })
-  await prisma.tropaAnimalCantidad.upsert({
-    where: { tropaId_tipoAnimal: { tropaId: tropa2.id, tipoAnimal: 'NT' } },
-    update: { cantidad: 7 },
-    create: { tropaId: tropa2.id, tipoAnimal: 'NT', cantidad: 7 }
-  })
+function logOk(msg: string, count: number | string) {
+  console.log(`  ✅ ${msg}: ${count}`)
+}
 
-  const animalesTropa2: { tipo: TipoAnimal; peso: number; raza: string }[] = [
-    { tipo: 'VQ', peso: 395, raza: 'Angus' }, { tipo: 'VQ', peso: 410, raza: 'Hereford' },
-    { tipo: 'VQ', peso: 385, raza: 'Angus' }, { tipo: 'VQ', peso: 420, raza: 'Brangus' },
-    { tipo: 'VQ', peso: 398, raza: 'Angus' }, { tipo: 'VQ', peso: 412, raza: 'Hereford' },
-    { tipo: 'VQ', peso: 390, raza: 'Angus' }, { tipo: 'VQ', peso: 425, raza: 'Brangus' },
-    { tipo: 'NT', peso: 460, raza: 'Angus' }, { tipo: 'NT', peso: 475, raza: 'Hereford' },
-    { tipo: 'NT', peso: 455, raza: 'Angus' }, { tipo: 'NT', peso: 480, raza: 'Brangus' },
-    { tipo: 'NT', peso: 468, raza: 'Angus' }, { tipo: 'NT', peso: 482, raza: 'Hereford' },
-    { tipo: 'NT', peso: 470, raza: 'Angus' },
-  ]
+function logErr(msg: string, error: unknown) {
+  console.error(`  ❌ ${msg}`)
+  if (error instanceof Error) console.error(`     ${error.message}`)
+}
 
-  for (let i = 0; i < animalesTropa2.length; i++) {
-    const a = animalesTropa2[i]
-    const codigo = `B${year}0002-${String(i + 1).padStart(3, '0')}`
-    const animal = await prisma.animal.upsert({
-      where: { codigo },
-      update: {},
-      create: {
-        tropaId: tropa2.id, numero: i + 1, codigo,
-        tipoAnimal: a.tipo, raza: a.raza,
-        pesoVivo: a.peso, estado: 'PESADO', corralId: corralB.id
-      }
-    })
-    await prisma.pesajeIndividual.upsert({
-      where: { animalId: animal.id },
-      update: {},
-      create: { animalId: animal.id, peso: a.peso, operadorId: admin.id }
-    })
+function normalize(s: string): string {
+  return s
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z0-9]/g, '')
+    .trim()
+}
+
+function findCliente(
+  clientes: { id: string; nombre: string; cuit: string | null }[],
+  cuit?: string | null,
+  nombre?: string | null,
+): { id: string } | undefined {
+  if (cuit) {
+    const byCuit = clientes.find((c) => c.cuit === cuit)
+    if (byCuit) return byCuit
   }
-
-  // Tropa 3 - PESADA con 12 animales
-  const tropa3 = await prisma.tropa.upsert({
-    where: { codigo: `B ${year} 0003` },
-    update: {},
-    create: {
-      codigo: `B ${year} 0003`, numero: 3,
-      productorId: prod3.id, usuarioFaenaId: uf3.id,
-      especie: Especie.BOVINO,
-      dte: `DTE-${year}-0003`, guia: `GUIA-${year}-003`,
-      cantidadCabezas: 12, corralId: corralC.id,
-      estado: 'PESADO', pesoTotalIndividual: 5680, operadorId: admin.id
+  if (nombre) {
+    const norm = normalize(nombre)
+    const match = clientes.find((c) => normalize(c.nombre).includes(norm) || norm.includes(normalize(c.nombre)))
+    if (match) return match
+    const firstPart = nombre.split(' ')[0]
+    if (firstPart.length > 3) {
+      const normFirst = normalize(firstPart)
+      const match2 = clientes.find((c) => normalize(c.nombre).includes(normFirst) || normFirst.includes(normalize(c.nombre)))
+      if (match2) return match2
     }
-  })
-
-  await prisma.tropaAnimalCantidad.upsert({
-    where: { tropaId_tipoAnimal: { tropaId: tropa3.id, tipoAnimal: 'NO' } },
-    update: { cantidad: 6 },
-    create: { tropaId: tropa3.id, tipoAnimal: 'NO', cantidad: 6 }
-  })
-  await prisma.tropaAnimalCantidad.upsert({
-    where: { tropaId_tipoAnimal: { tropaId: tropa3.id, tipoAnimal: 'MEJ' } },
-    update: { cantidad: 6 },
-    create: { tropaId: tropa3.id, tipoAnimal: 'MEJ', cantidad: 6 }
-  })
-
-  const animalesTropa3: { tipo: TipoAnimal; peso: number; raza: string }[] = [
-    { tipo: 'NO', peso: 490, raza: 'Angus' }, { tipo: 'NO', peso: 505, raza: 'Hereford' },
-    { tipo: 'NO', peso: 478, raza: 'Angus' }, { tipo: 'NO', peso: 512, raza: 'Brangus' },
-    { tipo: 'NO', peso: 495, raza: 'Angus' }, { tipo: 'NO', peso: 508, raza: 'Hereford' },
-    { tipo: 'MEJ', peso: 380, raza: 'Angus' }, { tipo: 'MEJ', peso: 395, raza: 'Hereford' },
-    { tipo: 'MEJ', peso: 372, raza: 'Angus' }, { tipo: 'MEJ', peso: 388, raza: 'Brangus' },
-    { tipo: 'MEJ', peso: 402, raza: 'Angus' }, { tipo: 'MEJ', peso: 378, raza: 'Hereford' },
-  ]
-
-  for (let i = 0; i < animalesTropa3.length; i++) {
-    const a = animalesTropa3[i]
-    const codigo = `B${year}0003-${String(i + 1).padStart(3, '0')}`
-    const animal = await prisma.animal.upsert({
-      where: { codigo },
-      update: {},
-      create: {
-        tropaId: tropa3.id, numero: i + 1, codigo,
-        tipoAnimal: a.tipo, raza: a.raza,
-        pesoVivo: a.peso, estado: 'PESADO', corralId: corralC.id
-      }
-    })
-    await prisma.pesajeIndividual.upsert({
-      where: { animalId: animal.id },
-      update: {},
-      create: { animalId: animal.id, peso: a.peso, operadorId: admin.id }
-    })
   }
+  return undefined
+}
 
-  // Tropa 4 - EN_CORRAL (para probar pesaje individual)
-  const tropa4 = await prisma.tropa.upsert({
-    where: { codigo: `B ${year} 0004` },
-    update: {},
-    create: {
-      codigo: `B ${year} 0004`, numero: 4,
-      productorId: prod1.id, usuarioFaenaId: uf1.id,
-      especie: Especie.BOVINO,
-      dte: `DTE-${year}-0004`, guia: `GUIA-${year}-004`,
-      cantidadCabezas: 10, corralId: corralD.id,
-      estado: 'EN_CORRAL', pesoBruto: 8000, pesoTara: 5500,
-      pesoNeto: 2500, operadorId: admin.id
-    }
-  })
+// ─── LIMPIEZA TOTAL ────────────────────────────────────────────────────────────
 
-  await prisma.tropaAnimalCantidad.upsert({
-    where: { tropaId_tipoAnimal: { tropaId: tropa4.id, tipoAnimal: 'NO' } },
-    update: { cantidad: 5 },
-    create: { tropaId: tropa4.id, tipoAnimal: 'NO', cantidad: 5 }
-  })
-  await prisma.tropaAnimalCantidad.upsert({
-    where: { tropaId_tipoAnimal: { tropaId: tropa4.id, tipoAnimal: 'VA' } },
-    update: { cantidad: 5 },
-    create: { tropaId: tropa4.id, tipoAnimal: 'VA', cantidad: 5 }
-  })
+async function limpiarBaseDeDatos() {
+  logHeader('🗑️  LIMPIEZA TOTAL - Eliminando TODOS los datos existentes')
 
-  // Tropa 5 - RECIBIDO (sin pesaje individual)
-  const tropa5 = await prisma.tropa.upsert({
-    where: { codigo: `B ${year} 0005` },
-    update: {},
-    create: {
-      codigo: `B ${year} 0005`, numero: 5,
-      productorId: prod2.id, usuarioFaenaId: uf2.id,
-      especie: Especie.BOVINO,
-      dte: `DTE-${year}-0005`, guia: `GUIA-${year}-005`,
-      cantidadCabezas: 8, corralId: corralE1.id,
-      estado: 'RECIBIDO', pesoBruto: 6500, operadorId: admin.id
-    }
-  })
-
-  await prisma.tropaAnimalCantidad.upsert({
-    where: { tropaId_tipoAnimal: { tropaId: tropa5.id, tipoAnimal: 'NT' } },
-    update: { cantidad: 8 },
-    create: { tropaId: tropa5.id, tipoAnimal: 'NT', cantidad: 8 }
-  })
-
-  console.log(`   ✓ 5 tropas creadas (3 con pesaje individual completo)`)
-
-  // 8. Configuración del frigorífico
-  console.log('⚙️ Creando configuración del frigorífico...')
-  await prisma.configuracionFrigorifico.upsert({
-    where: { id: 'config-main' },
-    update: {},
-    create: {
-      id: 'config-main',
-      nombre: 'Solemar Alimentaria',
-      direccion: 'Ruta 9 KM 45, Córdoba, Argentina',
-      numeroEstablecimiento: '12.345',
-      cuit: '30-12345678-9',
-      numeroMatricula: 'MAT-2024-001'
-    }
-  })
-  console.log(`   ✓ Configuración del frigorífico creada`)
-
-  // 9. Actualizar stock de corrales
   try {
-    await prisma.corral.update({ where: { id: corralA.id }, data: { stockBovinos: 20 } })
-    await prisma.corral.update({ where: { id: corralB.id }, data: { stockBovinos: 15 } })
-    await prisma.corral.update({ where: { id: corralC.id }, data: { stockBovinos: 12 } })
-    await prisma.corral.update({ where: { id: corralD.id }, data: { stockBovinos: 10 } })
-    await prisma.corral.update({ where: { id: corralE1.id }, data: { stockBovinos: 8 } })
-  } catch (e) {
-    // Ignore if corral not found
-  }
+    // Desactivar restricciones de FK para SQLite
+    await prisma.$executeRawUnsafe('PRAGMA foreign_keys = OFF')
+    console.log('  ⚙️  Foreign keys desactivadas')
 
-  console.log('\n✅ Seed completado exitosamente!')
-  console.log('\n📋 Datos de acceso:')
-  console.log('   Admin: admin / admin123 (PIN: 1234)')
-  console.log('   Balanza: balanza / balanza123 (PIN: 1111)')
-  console.log('   Supervisor: supervisor / super123 (PIN: 2222)')
-  console.log('\n📊 Tropas creadas:')
-  console.log(`   - B ${year} 0001: 20 animales PESADOS (9,450 kg total)`)
-  console.log(`   - B ${year} 0002: 15 animales PESADOS (7,230 kg total)`)
-  console.log(`   - B ${year} 0003: 12 animales PESADOS (5,680 kg total)`)
-  console.log(`   - B ${year} 0004: 10 animales EN_CORRAL (listo para pesaje)`)
-  console.log(`   - B ${year} 0005: 8 animales RECIBIDO (pendiente tara)`)
+    // Tablas con datos que dependen de otras (orden inverso de dependencias)
+    const tablas = [
+      // Ciclo II
+      'MovimientoDespostada',
+      'MermaDespostada',
+      'CajaEmpaque',
+      'Cuarto',
+      'LoteDespostada',
+      'ExpedicionCicloII',
+      'Pallet',
+
+      // Despachos
+      'DespachoItem',
+      'Despacho',
+
+      // Precios
+      'HistorialPrecioCorte',
+      'PrecioCorte',
+      'HistorialPrecio',
+      'PrecioCliente',
+
+      // Reclamos
+      'ArchivoReclamo',
+      'RespuestaReclamo',
+      'ReclamoCliente',
+
+      // Emails
+      'HistorialEnvio',
+      'ProgramacionReporte',
+      'DestinatarioReporte',
+
+      // Barras
+      'CodigoDestinoBarcode',
+      'CodigoTransporteBarcode',
+      'CodigoTrabajoBarcode',
+      'CodigoTipificacionBarcode',
+      'CodigoEspecieBarcode',
+      'CodigoArticulo',
+      'NumeradorCicloII',
+
+      // Rendering y Cueros
+      'RegistroRendering',
+      'RegistroCuero',
+
+      // Facturación
+      'DetalleFactura',
+      'Factura',
+
+      // Menudencias
+      'Menudencia',
+      'TipoMenudencia',
+
+      // Romaneo / Medias Reses
+      'MediaRes',
+      'StockMediaRes',
+      'MovimientoCamara',
+      'Romaneo',
+
+      // Faena
+      'AsignacionGarron',
+      'ListaFaenaTropa',
+      'ListaFaena',
+
+      // Animales / Pesaje
+      'PesajeIndividual',
+      'PesajeCamion',
+      'TropaAnimalCantidad',
+      'Animal',
+      'Tropa',
+
+      // Auditoría
+      'Auditoria',
+
+      // Documentos
+      'CCIR',
+      'DeclaracionJurada',
+
+      // Maestros
+      'Operador',
+      'Cliente',
+      'Transportista',
+      'Corral',
+      'Camara',
+      'Tipificador',
+      'Producto',
+      'Insumo',
+      'TipoProducto',
+      'SubproductoConfig',
+      'CondicionEmbalaje',
+      'Rotulo',
+      'Numerador',
+      'LayoutGlobalModulo',
+
+      // Códigos
+      'CodigoEspecie',
+      'CodigoTransporte',
+      'CodigoDestino',
+      'CodigoTipoTrabajo',
+      'CodigoTipificacion',
+
+      // Configuración
+      'ConfiguracionFrigorifico',
+    ]
+
+    for (const tabla of tablas) {
+      try {
+        const result = await prisma.$executeRawUnsafe(`DELETE FROM "${tabla}"`)
+        console.log(`  🗑️  ${tabla}: OK`)
+      } catch (e) {
+        // Si la tabla no existe, ignorar
+        console.log(`  ⏭️  ${tabla}: saltada (no existe)`)
+      }
+    }
+
+    // Reactivar FK
+    await prisma.$executeRawUnsafe('PRAGMA foreign_keys = ON')
+    console.log('  ⚙️  Foreign keys reactivadas')
+    console.log('  ✅ Base de datos limpiada completamente')
+  } catch (error) {
+    console.error('  ❌ Error durante la limpieza:', error)
+    throw error
+  }
+}
+
+// ─── Main ──────────────────────────────────────────────────────────────────────
+
+async function main() {
+  console.log('\n🚀 SOLEMAR ALIMENTARIA - Seed de Datos Reales')
+  console.log('   (Elimina datos previos y carga solo datos del Excel)')
+  console.log('   Fuente: Trazasole_Datos_Consolidados.xlsx → seed-data/*.json')
+  const startTime = Date.now()
+
+  // ═══ PASO 0: LIMPIEZA TOTAL ═══
+  await limpiarBaseDeDatos()
+
+  try {
+    // ═══ PASO 1: Operador Admin ═══
+    logHeader('1️⃣  Operador Administrador')
+    try {
+      const hashedPassword = await bcrypt.hash('admin123', 10)
+      const admin = await prisma.operador.create({
+        data: {
+          nombre: 'Administrador',
+          usuario: 'admin',
+          password: hashedPassword,
+          pin: '1234',
+          rol: RolOperador.ADMINISTRADOR,
+          email: 'admin@solemar.com.ar',
+          activo: true,
+          puedePesajeCamiones: true,
+          puedePesajeIndividual: true,
+          puedeMovimientoHacienda: true,
+          puedeListaFaena: true,
+          puedeRomaneo: true,
+          puedeIngresoCajon: true,
+          puedeMenudencias: true,
+          puedeStock: true,
+          puedeReportes: true,
+          puedeCCIR: true,
+          puedeFacturacion: true,
+          puedeConfiguracion: true,
+        },
+      })
+      logOk('Operador admin creado', admin.usuario)
+    } catch (e) {
+      logErr('Error creando operador admin', e)
+    }
+
+    // ═══ PASO 2: Configuración del Frigorífico ═══
+    logHeader('2️⃣  Configuración del Frigorífico')
+    try {
+      const config = await prisma.configuracionFrigorifico.create({
+        data: {
+          id: 'cfg-solemar',
+          nombre: 'Solemar Alimentaria',
+          direccion: 'Ruta Provincial N°7, Km 1180',
+          numeroEstablecimiento: '3820',
+          cuit: '30-70116296-3',
+          numeroMatricula: 'N° 1234',
+        },
+      })
+      logOk('Configuración creada', config.nombre)
+    } catch (e) {
+      logErr('Error creando configuración', e)
+    }
+
+    // ═══ PASO 3: Corrales (desde JSON) ═══
+    logHeader('3️⃣  Corrales')
+    try {
+      const corralesData = readJsonFile<{
+        id: string; nombre: string; capacidad: number; observaciones: string | null
+      }>('corrales.json')
+      if (corralesData.length > 0) {
+        const count = await prisma.corral.createMany({
+          data: corralesData.map((c) => ({
+            nombre: c.nombre,
+            capacidad: c.capacidad,
+            observaciones: c.observaciones ?? undefined,
+            activo: true,
+          })),
+        })
+        logOk('Corrales creados', count.count)
+      } else {
+        console.log('  ⏭️  Sin datos de corrales')
+      }
+    } catch (e) {
+      logErr('Error creando corrales', e)
+    }
+
+    // ═══ PASO 4: Cámaras (desde JSON) ═══
+    logHeader('4️⃣  Cámaras')
+    try {
+      const camarasData = readJsonFile<{
+        id: string; nombre: string; tipo: string; capacidad: number; observaciones: string | null
+      }>('camaras.json')
+      if (camarasData.length > 0) {
+        const count = await prisma.camara.createMany({
+          data: camarasData.map((c) => ({
+            nombre: c.nombre,
+            tipo: (c.tipo as TipoCamara) || TipoCamara.DEPOSITO,
+            capacidad: c.capacidad,
+            observaciones: c.observaciones ?? undefined,
+            activo: true,
+          })),
+        })
+        logOk('Cámaras creadas', count.count)
+      } else {
+        console.log('  ⏭️  Sin datos de cámaras')
+      }
+    } catch (e) {
+      logErr('Error creando cámaras', e)
+    }
+
+    // ═══ PASO 5: Tipificadores (desde JSON) ═══
+    logHeader('5️⃣  Tipificadores')
+    try {
+      const tipificadoresData = readJsonFile<{
+        id: string; nombre: string; apellido: string; numero: string | null; matricula: string
+      }>('tipificadores.json')
+      if (tipificadoresData.length > 0) {
+        const count = await prisma.tipificador.createMany({
+          data: tipificadoresData.map((t) => ({
+            nombre: t.nombre,
+            apellido: t.apellido,
+            numero: t.numero ?? undefined,
+            matricula: t.matricula,
+            activo: true,
+          })),
+        })
+        logOk('Tipificadores creados', count.count)
+      } else {
+        console.log('  ⏭️  Sin datos de tipificadores')
+      }
+    } catch (e) {
+      logErr('Error creando tipificadores', e)
+    }
+
+    // ═══ PASO 6: Clientes (desde JSON) ═══
+    logHeader('6️⃣  Clientes (Productores + Usuarios de Faena)')
+    let clientes: { id: string; nombre: string; cuit: string | null; esProductor: boolean; esUsuarioFaena: boolean }[] = []
+
+    try {
+      const clientesData = readJsonFile<{
+        id: string; nombre: string; cuit: string | null; email: string | null;
+        telefono: string | null; contacto: string | null; esProductor: boolean; esUsuarioFaena: boolean
+      }>('clientes.json')
+
+      for (const c of clientesData) {
+        try {
+          const created = await prisma.cliente.create({
+            data: {
+              nombre: c.nombre,
+              cuit: c.cuit ?? undefined,
+              email: c.email ?? undefined,
+              telefono: c.telefono ?? undefined,
+              esProductor: c.esProductor,
+              esUsuarioFaena: c.esUsuarioFaena,
+              activo: true,
+              observaciones: c.contacto ? `Contacto: ${c.contacto}` : undefined,
+            },
+          })
+          clientes.push({
+            id: created.id,
+            nombre: created.nombre,
+            cuit: created.cuit,
+            esProductor: created.esProductor,
+            esUsuarioFaena: created.esUsuarioFaena,
+          })
+        } catch (err) {
+          console.warn(`  ⚠️  No se pudo crear cliente: ${c.nombre} (${c.cuit})`)
+        }
+      }
+      logOk('Clientes creados', clientes.length)
+    } catch (e) {
+      logErr('Error creando clientes', e)
+    }
+
+    // Cliente por defecto para relaciones que no coincidan
+    let defaultClienteId: string
+    try {
+      const defCliente = await prisma.cliente.create({
+        data: {
+          nombre: 'Cliente sin identificar',
+          cuit: '00-00000000-0',
+          esUsuarioFaena: true,
+          activo: true,
+          observaciones: 'Cliente genérico para relaciones sin coincidencia',
+        },
+      })
+      defaultClienteId = defCliente.id
+    } catch (e) {
+      defaultClienteId = clientes[0]?.id || ''
+    }
+
+    // ═══ PASO 7: Tropas (desde JSON) ═══
+    logHeader('7️⃣  Tropas')
+    const tropaIdMap = new Map<number, string>()
+    const tropaCodigoMap = new Map<number, string>()
+
+    try {
+      const tropasData = readJsonFile<{
+        numero: number; codigo: string; especie: string; cantidadCabezas: number;
+        productorNombre: string | null; productorCuit: string | null;
+        usuarioFaenaNombre: string | null; usuarioFaenaCuit?: string | null;
+        fechaFaena: string | null; estado: string;
+        pesoVivo: number | null; kgGancho: number | null; rindePct: number | null;
+        observaciones: string | null
+      }>('tropas.json')
+
+      let tropasCreadas = 0
+      let tropasSinDatos = 0
+      for (const t of tropasData) {
+        try {
+          // Saltar tropas sin datos (173-200 estaban vacías en el Excel)
+          if (!t.cantidadCabezas || t.cantidadCabezas <= 0) {
+            tropasSinDatos++
+            continue
+          }
+
+          const productor = findCliente(clientes, t.productorCuit, t.productorNombre)
+          const usuarioFaena = findCliente(clientes, t.usuarioFaenaCuit ?? null, t.usuarioFaenaNombre)
+
+          const especie = t.especie === 'EQUINO' ? Especie.EQUINO : Especie.BOVINO
+          const estadoTropa = t.estado === 'FAENADO' ? EstadoTropa.FAENADO
+            : t.estado === 'DESPACHADO' ? EstadoTropa.DESPACHADO
+            : t.estado === 'EN_FAENA' ? EstadoTropa.EN_FAENA
+            : t.estado === 'PESADO' ? EstadoTropa.PESADO
+            : EstadoTropa.RECIBIDO
+
+          const created = await prisma.tropa.create({
+            data: {
+              numero: t.numero,
+              codigo: t.codigo,
+              productorId: productor?.id ?? null,
+              usuarioFaenaId: usuarioFaena?.id ?? defaultClienteId,
+              especie,
+              dte: `DTE-2026-${String(t.numero).padStart(4, '0')}`,
+              guia: `GUIA-2026-${String(t.numero).padStart(4, '0')}`,
+              cantidadCabezas: t.cantidadCabezas,
+              estado: estadoTropa,
+              pesoBruto: t.pesoVivo ? t.pesoVivo * 1.15 : null,
+              pesoNeto: t.pesoVivo ?? null,
+              observaciones: t.observaciones ?? undefined,
+              fechaRecepcion: t.fechaFaena ? new Date(t.fechaFaena) : new Date(),
+            },
+          })
+          tropaIdMap.set(t.numero, created.id)
+          tropaCodigoMap.set(t.numero, t.codigo)
+          tropasCreadas++
+        } catch (err) {
+          console.warn(`  ⚠️  Error creando tropa #${t.numero}: ${(err as Error).message}`)
+        }
+      }
+      logOk('Tropas creadas', tropasCreadas)
+      if (tropasSinDatos > 0) console.log(`  ℹ️  Tropas sin datos (saltadas): ${tropasSinDatos}`)
+    } catch (e) {
+      logErr('Error general en tropas', e)
+    }
+
+    // ═══ PASO 8: Animales (desde JSON) ═══
+    logHeader('8️⃣  Animales')
+    try {
+      const animalesData = readJsonFile<{
+        tropaNumero: number; numero: number; codigo: string; caravana: string | null;
+        raza: string | null; tipoAnimal: string; pesoVivo: number | null;
+        kgEntrada: number | null; kgMediaA: number | null; kgMediaB: number | null;
+        totalKg: number | null; rindePct: number | null; garron: number | null;
+        estado: string
+      }>('animales.json')
+
+      const codigoSet = new Set<string>()
+      const animalData: {
+        tropaId: string; numero: number; codigo: string; caravana: string | null;
+        tipoAnimal: TipoAnimal; raza: string | null; pesoVivo: number | null;
+        estado: EstadoAnimal
+      }[] = []
+
+      const validTipos = new Set<string>(Object.values(TipoAnimal))
+      let skipped = 0
+
+      for (const a of animalesData) {
+        const tropaId = tropaIdMap.get(a.tropaNumero)
+        if (!tropaId) {
+          skipped++
+          continue
+        }
+
+        if (!validTipos.has(a.tipoAnimal)) {
+          skipped++
+          continue
+        }
+
+        // Manejar duplicados de código
+        let codigo = a.codigo
+        if (codigoSet.has(codigo)) {
+          let suffix = 2
+          while (codigoSet.has(`${a.codigo}-${suffix}`)) suffix++
+          codigo = `${a.codigo}-${suffix}`
+        }
+        codigoSet.add(codigo)
+
+        const estado = a.estado === 'FAENADO' ? EstadoAnimal.FAENADO
+          : a.estado === 'DESPACHADO' ? EstadoAnimal.DESPACHADO
+          : a.estado === 'EN_CAMARA' ? EstadoAnimal.EN_CAMARA
+          : a.estado === 'PESADO' ? EstadoAnimal.PESADO
+          : EstadoAnimal.RECIBIDO
+
+        animalData.push({
+          tropaId,
+          numero: a.numero,
+          codigo,
+          caravana: a.caravana ?? undefined,
+          tipoAnimal: a.tipoAnimal as TipoAnimal,
+          raza: a.raza ?? undefined,
+          pesoVivo: a.pesoVivo ?? undefined,
+          estado,
+        })
+      }
+
+      const BATCH_SIZE = 500
+      let animalsCreated = 0
+      for (let i = 0; i < animalData.length; i += BATCH_SIZE) {
+        const batch = animalData.slice(i, i + BATCH_SIZE)
+        const result = await prisma.animal.createMany({ data: batch })
+        animalsCreated += result.count
+      }
+      logOk('Animales creados', animalsCreated)
+      if (skipped > 0) console.log(`  ℹ️  Animales saltados (sin tropa/tipo inválido): ${skipped}`)
+    } catch (e) {
+      logErr('Error creando animales', e)
+    }
+
+    // ═══ PASO 9: Romaneos (desde JSON) ═══
+    logHeader('9️⃣  Romaneos')
+    try {
+      const romaneosData = readJsonFile<{
+        tropaNumero: number; animalNumero: number; garron: number;
+        tropaCodigo: string | null; tipoAnimal: string | null; raza: string | null;
+        pesoVivo: number | null; kgMediaIzq: number | null; kgMediaDer: number | null;
+        pesoTotal: number | null; rinde: number | null; fecha: string | null;
+        estado: string
+      }>('romaneos.json')
+
+      const validTipos = new Set<string>(Object.values(TipoAnimal))
+      const BATCH_SIZE = 500
+      let romaneosCreados = 0
+
+      for (let i = 0; i < romaneosData.length; i += BATCH_SIZE) {
+        const batch = romaneosData.slice(i, i + BATCH_SIZE)
+        const romaneoData = batch
+          .filter((r) => !r.tipoAnimal || validTipos.has(r.tipoAnimal))
+          .map((r) => ({
+            fecha: r.fecha ? new Date(r.fecha) : new Date(),
+            garron: r.garron,
+            tropaCodigo: r.tropaCodigo ?? undefined,
+            numeroAnimal: r.animalNumero,
+            tipoAnimal: r.tipoAnimal ? (r.tipoAnimal as TipoAnimal) : undefined,
+            raza: r.raza ?? undefined,
+            pesoVivo: r.pesoVivo ?? undefined,
+            pesoMediaIzq: r.kgMediaIzq ?? undefined,
+            pesoMediaDer: r.kgMediaDer ?? undefined,
+            pesoTotal: r.pesoTotal ?? undefined,
+            rinde: r.rinde ?? undefined,
+            estado: r.estado === 'CONFIRMADO' ? EstadoRomaneo.CONFIRMADO
+              : r.estado === 'ANULADO' ? EstadoRomaneo.ANULADO
+              : EstadoRomaneo.PENDIENTE,
+          }))
+
+        if (romaneoData.length > 0) {
+          const result = await prisma.romaneo.createMany({ data: romaneoData })
+          romaneosCreados += result.count
+        }
+      }
+      logOk('Romaneos creados', romaneosCreados)
+    } catch (e) {
+      logErr('Error creando romaneos', e)
+    }
+
+    // ═══ PASO 10: Facturas (desde JSON) ═══
+    logHeader('🔟 Facturas')
+    try {
+      const facturasData = readJsonFile<{
+        tropaNumero: number; usuario: string; fechaFaena: string | null;
+        cantAnimales: number; kgGancho: number; totalServicioIVA: number;
+        tasaInspVet: number; arancelIPCVA: number; totalFacturaImp: number;
+        noFactura: string; fechaFactura: string | null; fechaPago: string | null;
+        montoDepositado: number; estadoPago: string
+      }>('facturas.json')
+
+      let facturasCreadas = 0
+      let facturasDuplicadas = 0
+      const facturasVistas = new Set<string>()
+
+      for (const f of facturasData) {
+        try {
+          // Saltar facturas duplicadas por número
+          if (facturasVistas.has(f.noFactura)) {
+            facturasDuplicadas++
+            continue
+          }
+          facturasVistas.add(f.noFactura)
+
+          const cliente = findCliente(clientes, null, f.usuario) || { id: defaultClienteId } as { id: string }
+
+          const estado = f.estadoPago === 'PAGADO' ? EstadoFactura.PAGADA
+            : f.estadoPago === 'EMITIDA' ? EstadoFactura.EMITIDA
+            : f.estadoPago === 'ANULADA' ? EstadoFactura.ANULADA
+            : EstadoFactura.PENDIENTE
+
+          const numParts = f.noFactura.split('-')
+          const numeroInterno = parseInt(numParts[numParts.length - 1] || '0', 10) || facturasCreadas + 1
+
+          await prisma.factura.create({
+            data: {
+              numero: f.noFactura,
+              numeroInterno,
+              clienteId: cliente.id,
+              fecha: f.fechaFaena ? new Date(f.fechaFaena) : new Date(),
+              fechaEmision: f.fechaFactura ? new Date(f.fechaFactura) : undefined,
+              fechaPago: f.fechaPago ? new Date(f.fechaPago) : undefined,
+              subtotal: f.totalServicioIVA ?? 0,
+              iva: f.tasaInspVet ?? 0,
+              total: f.totalFacturaImp ?? 0,
+              estado,
+              observaciones: `Tropa #${f.tropaNumero} | ${f.cantAnimales} animales | ${f.kgGancho} kg gancho | Tasa Insp. Vet: ${f.tasaInspVet} | IPCVA: ${f.arancelIPCVA}`,
+              remito: f.noFactura,
+            },
+          })
+          facturasCreadas++
+        } catch (err) {
+          console.warn(`  ⚠️  Error creando factura ${f.noFactura}: ${(err as Error).message}`)
+        }
+      }
+      logOk('Facturas creadas', facturasCreadas)
+      if (facturasDuplicadas > 0) console.log(`  ℹ️  Facturas duplicadas (saltadas): ${facturasDuplicadas}`)
+    } catch (e) {
+      logErr('Error general en facturas', e)
+    }
+
+    // ═══ PASO 11: Menudencias (desde JSON) ═══
+    logHeader('1️⃣1️⃣ Menudencias')
+    try {
+      const menudenciasData = readJsonFile<{
+        tropaNumero: number; item: string; cantidad: number | null; kg: number | null;
+        unidades: number | null; kgDecomiso: number | null; tipoMenudenciaNombre: string
+      }>('menudencias.json')
+
+      // Crear tipos de menudencia únicos
+      const tiposMenudenciaSet = new Set<string>()
+      for (const m of menudenciasData) {
+        if (m.tipoMenudenciaNombre) tiposMenudenciaSet.add(m.tipoMenudenciaNombre)
+      }
+
+      const tiposNombres = Array.from(tiposMenudenciaSet)
+      const tiposMap = new Map<string, string>()
+      await prisma.tipoMenudencia.createMany({
+        data: tiposNombres.map((nombre) => ({ nombre, activo: true })),
+      })
+      console.log(`  ✅ Tipos de menudencia creados: ${tiposNombres.length}`)
+
+      // Buscar IDs de tipos creados
+      for (const nombre of tiposNombres) {
+        const tipo = await prisma.tipoMenudencia.findFirst({ where: { nombre } })
+        if (tipo) tiposMap.set(nombre, tipo.id)
+      }
+
+      // Filtrar menudencias con datos
+      const menudenciasValidas = menudenciasData.filter((m) => m.kg != null || m.cantidad != null)
+
+      const BATCH_SIZE = 500
+      let menudenciasCreadas = 0
+      for (let i = 0; i < menudenciasValidas.length; i += BATCH_SIZE) {
+        const batch = menudenciasValidas.slice(i, i + BATCH_SIZE)
+        const data = batch
+          .filter((m) => tiposMap.has(m.tipoMenudenciaNombre))
+          .map((m) => {
+            const tropaCodigo = tropaCodigoMap.get(m.tropaNumero)
+            return {
+              tipoMenudenciaId: tiposMap.get(m.tipoMenudenciaNombre)!,
+              tropaCodigo: tropaCodigo ?? undefined,
+              pesoIngreso: m.kg ?? undefined,
+              cantidadBolsas: m.unidades ? Math.round(m.unidades) : undefined,
+              fechaIngreso: new Date(),
+              observaciones: m.item ? `Item: ${m.item}${m.kgDecomiso ? ` | Decomiso: ${m.kgDecomiso} kg` : ''}` : undefined,
+            }
+          })
+          .filter((d) => d.tipoMenudenciaId)
+
+        if (data.length > 0) {
+          const result = await prisma.menudencia.createMany({ data })
+          menudenciasCreadas += result.count
+        }
+      }
+      logOk('Menudencias creadas', menudenciasCreadas)
+    } catch (e) {
+      logErr('Error creando menudencias', e)
+    }
+
+    // ═══ PASO 12: Numeradores ═══
+    logHeader('1️⃣2️⃣ Numeradores')
+    try {
+      await prisma.numerador.createMany({
+        data: [
+          { nombre: 'TROPA_BOVINO', ultimoNumero: 200, anio: 2026 },
+          { nombre: 'TROPA_EQUINO', ultimoNumero: 0, anio: 2026 },
+          { nombre: 'FACTURA', ultimoNumero: 172, anio: 2026 },
+          { nombre: 'TICKET', ultimoNumero: 0, anio: 2026 },
+          { nombre: 'ROMANEO', ultimoNumero: 1861, anio: 2026 },
+          { nombre: 'PESAJE_CAMION', ultimoNumero: 0, anio: 2026 },
+          { nombre: 'MENUDENCIA', ultimoNumero: 0, anio: 2026 },
+        ],
+      })
+      logOk('Numeradores creados', 7)
+    } catch (e) {
+      logErr('Error creando numeradores', e)
+    }
+
+    // ═══ RESUMEN ═══
+    logHeader('📊 Resumen del Seed')
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2)
+    console.log(`  ⏱️  Tiempo total: ${elapsed}s`)
+    console.log('  📦 Datos cargados (solo del Excel):')
+    console.log(`     • Operador Admin: 1`)
+    console.log(`     • Configuración: 1`)
+    console.log(`     • Clientes (productores + usuarios faena): ${clientes.length}`)
+    console.log(`     • Tropas: ${tropaIdMap.size}`)
+    console.log('     • Animales, Romaneos, Facturas, Menudencias')
+    console.log('     • Numeradores: 7')
+    console.log(`\n  ⚠️  Datos de prueba ELIMINADOS. Solo quedan datos reales del Excel.`)
+    console.log('\n🎉 Seed completado exitosamente!\n')
+  } catch (error) {
+    console.error('\n💥 Error fatal durante el seed:', error)
+    process.exit(1)
+  } finally {
+    await prisma.$disconnect()
+  }
 }
 
 main()
-  .catch((e) => {
-    console.error('❌ Error en seed:', e)
-    process.exit(1)
-  })
-  .finally(async () => {
-    await prisma.$disconnect()
-  })
