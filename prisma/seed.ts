@@ -572,6 +572,8 @@ async function main() {
             continue
           }
 
+          // NOTA: productorId es opcional (solo trazabilidad). Si no matchea,
+          // se guarda el nombre en observaciones para no perder el dato.
           const productor = findCliente(clientes, t.productorCuit, t.productorNombre)
           const usuarioFaena = findCliente(clientes, t.usuarioFaenaCuit ?? null, t.usuarioFaenaNombre)
 
@@ -581,6 +583,16 @@ async function main() {
             : t.estado === 'EN_FAENA' ? EstadoTropa.EN_FAENA
             : t.estado === 'PESADO' ? EstadoTropa.PESADO
             : EstadoTropa.RECIBIDO
+
+          // Construir observaciones incluyendo datos del productor si no tiene FK
+          const obsParts: string[] = []
+          if (t.observaciones) obsParts.push(t.observaciones)
+          if (t.productorNombre && !productor) {
+            const prodInfo = t.productorCuit
+              ? `Productor: ${t.productorNombre} (CUIT: ${t.productorCuit})`
+              : `Productor: ${t.productorNombre}`
+            obsParts.push(prodInfo)
+          }
 
           const created = await prisma.tropa.create({
             data: {
@@ -595,7 +607,7 @@ async function main() {
               estado: estadoTropa,
               pesoBruto: t.pesoVivo ? t.pesoVivo * 1.15 : null,
               pesoNeto: t.pesoVivo ?? null,
-              observaciones: t.observaciones ?? undefined,
+              observaciones: obsParts.length > 0 ? obsParts.join(' | ') : undefined,
               fechaRecepcion: t.fechaFaena ? new Date(t.fechaFaena) : new Date(),
             },
           })
