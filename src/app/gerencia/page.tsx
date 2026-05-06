@@ -90,12 +90,12 @@ export default function GerenciaPage() {
   useEffect(() => {
     fetchData();
 
-    // Auto-refresh cada 30 segundos
+    // Auto-refresh cada 2 minutos (evita re-renders excesivos cada 30s)
     const interval = setInterval(() => {
       if (navigator.onLine) {
         fetchData();
       }
-    }, 30000);
+    }, 120000);
 
     // Escuchar cambios de conexión
     const handleOnline = () => {

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react'
 
 // ============================================================
 // AUTH PROVIDER — Gestiona sesión del operador
@@ -60,6 +60,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [operador, setOperador] = useState<Operador | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Ref para acceder siempre al operador actual sin causar re-renders
+  const operadorRef = useRef<Operador | null>(null)
+
+  // Comparación profunda de permisos para evitar re-renders innecesarios
+  const permisosKey = useMemo(() => {
+    if (!operador) return null
+    return JSON.stringify(operador.permisos) + '|' + operador.rol
+  }, [operador?.permisos, operador?.rol])
+
+  // Actualizar operador solo si los permisos o rol cambiaron (evita cascada de re-renders)
+  const prevPermisosKey = useRef<string | null>(null)
+  const updateOperador = useCallback((newOperador: Operador | null) => {
+    operadorRef.current = newOperador
+    if (!newOperador) {
+      prevPermisosKey.current = null
+      setOperador(null)
+      return
+    }
+    const newKey = JSON.stringify(newOperador.permisos) + '|' + newOperador.rol
+    if (newKey !== prevPermisosKey.current) {
+      prevPermisosKey.current = newKey
+      setOperador(newOperador)
+    }
+  }, [])
+
   // Validar sesión al montar + refresh periódico
   useEffect(() => {
     let refreshInterval: ReturnType<typeof setInterval> | null = null
@@ -70,9 +95,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await fetch('/api/auth')
         const data = await res.json()
         if (mounted && data.success && data.data) {
-          setOperador(data.data)
+          updateOperador(data.data)
         } else if (mounted && res.status === 401) {
-          setOperador(null)
+          updateOperador(null)
         }
       } catch {
         // Network error - don't logout
@@ -87,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (res.ok) {
           const data = await res.json()
           if (data.success && data.data) {
-            setOperador(data.data)
+            updateOperador(data.data)
           }
         }
       } catch {
@@ -102,20 +127,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false
       if (refreshInterval) clearInterval(refreshInterval)
     }
-  }, [])
+  }, [updateOperador])
 
   // Re-validar cuando el usuario vuelve a la pestaña
   useEffect(() => {
     let mounted = true
 
     const handleVisibility = async () => {
-      if (document.visibilityState === 'visible' && operador) {
+      if (document.visibilityState === 'visible' && operadorRef.current) {
         try {
           const res = await fetch('/api/auth', { method: 'PATCH' })
           if (!mounted) return
           if (res.ok) {
             const data = await res.json()
-            if (data.success && data.data) setOperador(data.data)
+            if (data.success && data.data) updateOperador(data.data)
           } else if (res.status === 401) {
             // Retry once before forcing logout
             setTimeout(async () => {
@@ -123,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               try {
                 const retryRes = await fetch('/api/auth')
                 if (!mounted) return
-                if (retryRes.status === 401) setOperador(null)
+                if (retryRes.status === 401) updateOperador(null)
               } catch { /* keep logged in */ }
             }, 3000)
           }
@@ -136,7 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false
       document.removeEventListener('visibilitychange', handleVisibility)
     }
-  }, [operador])
+  }, []) // Removido `operador` de dependencias - usa operadorRef
 
   const login = useCallback(async (body: { usuario?: string; password?: string; pin?: string }) => {
     try {
@@ -147,6 +172,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       const data = await res.json()
       if (data.success) {
+        // Login siempre fuerza actualización completa
+        prevPermisosKey.current = null
         setOperador(data.data)
         return { success: true }
       }
@@ -160,6 +187,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await fetch('/api/auth', { method: 'DELETE' })
     } catch { /* ignore */ }
+    operadorRef.current = null
+    prevPermisosKey.current = null
     setOperador(null)
   }, [])
 
@@ -169,27 +198,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (res.ok) {
         const data = await res.json()
         if (data.success && data.data) {
-          setOperador(data.data)
+          updateOperador(data.data)
           return true
         }
       }
     } catch { /* ignore */ }
     return false
-  }, [])
+  }, [updateOperador])
 
+  // Permisos estables: usan ref para no depender de `operador` en el array de dependencias
   const hasPermission = useCallback((permiso: string | undefined): boolean => {
     if (!permiso) return true
-    if (operador?.rol === 'ADMINISTRADOR') return true
-    return operador?.permisos[permiso as keyof typeof operador.permisos] === true
-  }, [operador])
+    const op = operadorRef.current
+    if (op?.rol === 'ADMINISTRADOR') return true
+    return op?.permisos[permiso as keyof typeof op.permisos] === true
+  }, []) // Sin dependencias - función estable, lee del ref
 
   const hasPermissionOr = useCallback((permiso: string | undefined, permisoAlt: string | undefined): boolean => {
-    if (operador?.rol === 'ADMINISTRADOR') return true
-    return hasPermission(permiso) || hasPermission(permisoAlt)
-  }, [operador, hasPermission])
+    const op = operadorRef.current
+    if (op?.rol === 'ADMINISTRADOR') return true
+    if (!permiso && !permisoAlt) return true
+    return (permiso ? op?.permisos[permiso as keyof typeof op.permisos] === true : false) ||
+           (permisoAlt ? op?.permisos[permisoAlt as keyof typeof op.permisos] === true : false)
+  }, []) // Sin dependencias - función estable
+
+  const contextValue = useMemo(() => ({
+    operador,
+    loading,
+    login,
+    logout,
+    refreshSession,
+    hasPermission,
+    hasPermissionOr
+  }), [operador, loading, login, logout, refreshSession, hasPermission, hasPermissionOr])
 
   return (
-    <AuthContext.Provider value={{ operador, loading, login, logout, refreshSession, hasPermission, hasPermissionOr }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   )

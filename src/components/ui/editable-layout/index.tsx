@@ -182,8 +182,11 @@ export function EditableLayout({
       const data = await res.json()
       
       if (data.success) {
-        // Recargar la página para obtener valores por defecto
-        window.location.reload()
+        // Restaurar valores por defecto sin recargar la página
+        setBloques(bloquesIniciales)
+        setBotones(botonesIniciales)
+        setColorPrincipal('amber')
+        onLayoutChange?.({ bloques: bloquesIniciales, botones: botonesIniciales, colorPrincipal: 'amber' })
       }
     } catch (error) {
       toast.error('Error al resetear layout')

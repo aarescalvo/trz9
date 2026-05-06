@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
@@ -104,8 +104,8 @@ export function AppSidebar() {
     )
   }
 
-  // Filter nav groups by permission
-  const visibleNavGroups: NavGroup[] = NAV_GROUPS.map(group => {
+  // Filter nav groups by permission — memoizado para evitar recalcular en cada render
+  const visibleNavGroups: NavGroup[] = useMemo(() => NAV_GROUPS.map(group => {
     const filteredItems = group.items.filter(item =>
       hasPermissionOr(item.permiso, item.permisoAlt)
     )
@@ -115,7 +115,7 @@ export function AppSidebar() {
     })).filter(subGroup => subGroup.items.length > 0)
 
     return { ...group, items: filteredItems, subGroups: filteredSubGroups }
-  }).filter(group => group.items.length > 0 || (group.subGroups && group.subGroups.length > 0))
+  }).filter(group => group.items.length > 0 || (group.subGroups && group.subGroups.length > 0)), [hasPermissionOr])
 
   if (!operador) return null
 
