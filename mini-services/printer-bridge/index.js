@@ -279,12 +279,44 @@ const httpServer = http.createServer(async (req, res) => {
       return
     }
 
-    // ZPL de prueba
-    const testZPL = '^XA\n^FO50,50^A0N,40,40^FD** PRUEBA **^FS\n^FO50,100^A0N,25,25^FDZebra ZT230 - Bridge OK^FS\n^FO50,140^A0N,20,20^FD' + new Date().toLocaleString('es-AR') + '^FS\n^FO50,180^A0N,20,20^FDSolemar Alimentaria^FS\n^XZ'
+    // Detectar tipo de impresora y enviar prueba correspondiente
+    const printerLower = config.printerName.toLowerCase()
+    let testData = ''
+    let testType = ''
 
-    const result = await printRaw(config.printerName, testZPL)
+    if (printerLower.includes('datamax') || printerLower.includes('honeywell')) {
+      // DPL de prueba para Datamax
+      const fecha = new Date().toLocaleString('es-AR')
+      testData = '<STX><ESC>C1<ETX>\n' +
+        '<STX>H0080;o50,30;h1;w4;c26;f0;d3,PRUEBA<ETX>\n' +
+        '<STX>H0080;o50,80;h1;w2;c26;f0;d3,DATAMAX - Bridge OK<ETX>\n' +
+        '<STX>H0080;o50,120;h1;w2;c20;f0;d3,' + fecha + '<ETX>\n' +
+        '<STX>H0080;o50,160;h1;w2;c20;f0;d3,Solemar Alimentaria<ETX>\n' +
+        '<STX><ETX>'
+      testType = 'DPL'
+    } else if (printerLower.includes('sato')) {
+      // SBPL de prueba para Sato
+      const fecha = new Date().toLocaleString('es-AR')
+      testData = '<ESC>A<ESC>H0050<ESC>V0100<ESC>XLFDATS;** PRUEBA **<ESC>Q<ESC>Z\n' +
+        '<ESC>A<ESC>H0050<ESC>V0200<ESC>XLFDATS;SATO - Bridge OK<ESC>Q<ESC>Z\n' +
+        '<ESC>A<ESC>H0050<ESC>V0300<ESC>XLFDATS;' + fecha + '<ESC>Q<ESC>Z\n' +
+        '<ESC>A<ESC>H0050<ESC>V0400<ESC>XLFDATS;Solemar Alimentaria<ESC>Q<ESC>Z\n'
+      testType = 'SBPL'
+    } else {
+      // ZPL de prueba por defecto (Zebra, etc.)
+      const fecha = new Date().toLocaleString('es-AR')
+      testData = '^XA\n' +
+        '^FO50,50^A0N,40,40^FD** PRUEBA **^FS\n' +
+        '^FO50,100^A0N,25,25^FDZebra ZT230 - Bridge OK^FS\n' +
+        '^FO50,140^A0N,20,20^FD' + fecha + '^FS\n' +
+        '^FO50,180^A0N,20,20^FDSolemar Alimentaria^FS\n' +
+        '^XZ'
+      testType = 'ZPL'
+    }
+
+    const result = await printRaw(config.printerName, testData)
     res.setHeader('Content-Type', 'application/json')
-    res.end(JSON.stringify(result))
+    res.end(JSON.stringify({ ...result, testType }))
     return
   }
 
@@ -395,7 +427,7 @@ function generateDashboard() {
     <div class="card">
       <h2>Probar Impresion</h2>
       <p style="font-size:13px; color:#78716c; margin-bottom:12px">
-        Imprime una etiqueta de prueba en la Zebra.
+        Imprime una etiqueta de prueba. Detecta automaticamente el lenguaje (ZPL/DPL) segun la impresora.
       </p>
       <button class="btn btn-primary" onclick="testPrint()">Imprimir prueba</button>
       <div class="error-box" id="testError"></div>
@@ -410,7 +442,7 @@ function generateDashboard() {
         <p><strong>3.</strong> Crear/editar impresora:</p>
         <p>&nbsp;&nbsp; Puerto: <strong>RED</strong></p>
         <p>&nbsp;&nbsp; IP: <strong>la IP de esta PC</strong></p>
-        <p>&nbsp;&nbsp; Marca: ZEBRA | Modelo: ZT230 | DPI: 203</p>
+        <p>&nbsp;&nbsp; Marca: ZEBRA / DATAMAX | Modelo: segun impresora | DPI: 203</p>
         <p><strong>4.</strong> Puerto TCP: <strong>${config.tcpPort}</strong></p>
       </div>
     </div>

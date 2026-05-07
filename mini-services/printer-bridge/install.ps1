@@ -12,7 +12,7 @@
 
 $ErrorActionPreference = "Stop"
 $InstallDir = "C:\SolemarAlimentaria\printer-bridge"
-$RepoUrl = "https://raw.githubusercontent.com/aarescalvo/trz5/master/mini-services/printer-bridge"
+$RepoUrl = "https://raw.githubusercontent.com/aarescalvo/trz7/master/mini-services/printer-bridge"
 
 Write-Host "========================================================" -ForegroundColor Cyan
 Write-Host "  PRINTER BRIDGE v2.0 - Solemar Alimentaria" -ForegroundColor Cyan
