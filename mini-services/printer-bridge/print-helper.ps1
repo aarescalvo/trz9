@@ -3,11 +3,12 @@
     Helper para enviar datos RAW a impresora Windows.
     Usado por Printer Bridge (index.js).
 
-    Estrategia en 4 pasos:
-    1) StartDocPrinter con datatype "RAW" - Zebra y compatibles
-    2) StartDocPrinter con datatype null (dejar que Windows elija) - Datamax/Win10
-    3) OpenPrinter con PRINTER_DEFAULTS + datatype RAW + WritePrinter
-    4) Comando `print` de Windows como ultimo recurso
+    Estrategia en 5 pasos:
+    1) StartDocPrinter con datatype "RAW" (Unicode) - Zebra
+    2) StartDocPrinter con datatype "RAW" (ANSI) - Datamax (el driver reconoce RAW en ASCII)
+    3) StartDocPrinter con datatype null (ANSI) - fallback
+    4) OpenPrinter con PRINTER_DEFAULTS (ANSI) + WritePrinter
+    5) Comando print.exe
 
 .PARAMETER PrinterName
     Nombre exacto de la impresora en Windows.
@@ -24,7 +25,6 @@ param(
     [string]$FilePath
 )
 
-# Verificar archivo existe
 if (-not (Test-Path $FilePath)) {
     Write-Output "ERROR:Archivo no encontrado: $FilePath"
     exit 1
@@ -39,39 +39,48 @@ if ($fileSize -eq 0) {
 $data = [System.IO.File]::ReadAllBytes($FilePath)
 
 # ============================================================
-# Cargar Win32 API
+# Cargar Win32 API (Unicode + ANSI)
 # ============================================================
 try {
     $code = @'
 using System;
 using System.Runtime.InteropServices;
 
-public class SpoolerRaw
+public class SpoolerPrint
 {
+    // DOC_INFO_1 Unicode
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    public struct DOC_INFO_1
+    public struct DOC_INFO_1W
     {
         public string pDocName;
         public string pOutputFile;
         public string pDatatype;
     }
 
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    public struct PRINTER_DEFAULTS
+    // DOC_INFO_1 ANSI - El driver Datamax reconoce "RAW" en ASCII
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    public struct DOC_INFO_1A
     {
-        public int pDatatype;
-        public int pDevMode;
-        public int DesiredAccess;
+        public string pDocName;
+        public string pOutputFile;
+        public string pDatatype;
     }
 
+    // OpenPrinter Unicode
     [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
 
-    [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, ref PRINTER_DEFAULTS pDefault);
+    // OpenPrinter ANSI
+    [DllImport("winspool.drv", CharSet = CharSet.Ansi, SetLastError = true)]
+    public static extern bool OpenPrinterA(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
 
-    [DllImport("winspool.drv", SetLastError = true)]
-    public static extern bool StartDocPrinter(IntPtr hPrinter, int Level, ref DOC_INFO_1 pDocInfo);
+    // StartDocPrinter Unicode
+    [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern bool StartDocPrinter(IntPtr hPrinter, int Level, ref DOC_INFO_1W pDocInfo);
+
+    // StartDocPrinter ANSI
+    [DllImport("winspool.drv", CharSet = CharSet.Ansi, SetLastError = true)]
+    public static extern bool StartDocPrinterA(IntPtr hPrinter, int Level, ref DOC_INFO_1A pDocInfo);
 
     [DllImport("winspool.drv", SetLastError = true)]
     public static extern bool StartPagePrinter(IntPtr hPrinter);
@@ -92,7 +101,7 @@ public class SpoolerRaw
     public static extern uint GetLastError();
 }
 '@
-    if (-not ([System.Management.Automation.PSTypeName]'SpoolerRaw').Type) {
+    if (-not ([System.Management.Automation.PSTypeName]'SpoolerPrint').Type) {
         Add-Type -TypeDefinition $code -Language CSharp | Out-Null
     }
 } catch {
@@ -101,158 +110,136 @@ public class SpoolerRaw
 }
 
 # ============================================================
-# Metodo 1: Spooler con datatype "RAW"
+# Imprimir via ANSI (metodo principal para Datamax)
 # ============================================================
-function Print-TryRaw {
+function Print-ANSI {
     param([string]$Printer, [byte[]]$Bytes, [string]$Datatype)
 
-    $docInfo = New-Object SpoolerRaw+DOC_INFO_1
-    $docInfo.pDocName = "PrinterBridge"
-    $docInfo.pOutputFile = $null
-    $docInfo.pDatatype = $Datatype
-
     $hPrinter = [IntPtr]::Zero
-
-    $result = [SpoolerRaw]::OpenPrinter($Printer, [ref]$hPrinter, [IntPtr]::Zero)
-    if (-not $result) {
-        $errCode = [SpoolerRaw]::GetLastError()
-        throw "OpenPrinter codigo:$errCode"
-    }
+    $result = [SpoolerPrint]::OpenPrinterA($Printer, [ref]$hPrinter, [IntPtr]::Zero)
+    if (-not $result) { throw "OpenPrinterA codigo:$([SpoolerPrint]::GetLastError())" }
 
     try {
+        $docInfo = New-Object SpoolerPrint+DOC_INFO_1A
+        $docInfo.pDocName = "PrinterBridge"
+        $docInfo.pOutputFile = $null
+        $docInfo.pDatatype = $Datatype
+
         $written = 0
 
-        $result = [SpoolerRaw]::StartDocPrinter($hPrinter, 1, [ref]$docInfo)
+        $result = [SpoolerPrint]::StartDocPrinterA($hPrinter, 1, [ref]$docInfo)
         if (-not $result) {
-            $errCode = [SpoolerRaw]::GetLastError()
-            throw "StartDocPrinter codigo:$errCode"
+            $errCode = [SpoolerPrint]::GetLastError()
+            throw "StartDocPrinterA codigo:$errCode"
         }
 
-        $result = [SpoolerRaw]::StartPagePrinter($hPrinter)
+        $result = [SpoolerPrint]::StartPagePrinter($hPrinter)
         if (-not $result) {
-            $errCode = [SpoolerRaw]::GetLastError()
-            [SpoolerRaw]::EndDocPrinter($hPrinter) | Out-Null
+            $errCode = [SpoolerPrint]::GetLastError()
+            [SpoolerPrint]::EndDocPrinter($hPrinter) | Out-Null
             throw "StartPagePrinter codigo:$errCode"
         }
 
-        $result = [SpoolerRaw]::WritePrinter($hPrinter, $Bytes, $Bytes.Length, [ref]$written)
+        $result = [SpoolerPrint]::WritePrinter($hPrinter, $Bytes, $Bytes.Length, [ref]$written)
         if (-not $result) {
-            $errCode = [SpoolerRaw]::GetLastError()
-            [SpoolerRaw]::EndPagePrinter($hPrinter) | Out-Null
-            [SpoolerRaw]::EndDocPrinter($hPrinter) | Out-Null
+            $errCode = [SpoolerPrint]::GetLastError()
+            [SpoolerPrint]::EndPagePrinter($hPrinter) | Out-Null
+            [SpoolerPrint]::EndDocPrinter($hPrinter) | Out-Null
             throw "WritePrinter codigo:$errCode"
         }
 
-        [SpoolerRaw]::EndPagePrinter($hPrinter) | Out-Null
-        [SpoolerRaw]::EndDocPrinter($hPrinter) | Out-Null
-
+        [SpoolerPrint]::EndPagePrinter($hPrinter) | Out-Null
+        [SpoolerPrint]::EndDocPrinter($hPrinter) | Out-Null
         return @{ success = $true; bytes = $written }
-
     } finally {
-        if ($hPrinter -ne [IntPtr]::Zero) {
-            [SpoolerRaw]::ClosePrinter($hPrinter) | Out-Null
-        }
+        if ($hPrinter -ne [IntPtr]::Zero) { [SpoolerPrint]::ClosePrinter($hPrinter) | Out-Null }
     }
 }
 
 # ============================================================
-# Metodo 3: OpenPrinter con PRINTER_DEFAULTS forzando RAW
+# Imprimir via Unicode (metodo para Zebra)
 # ============================================================
-function Print-TryDefaults {
-    param([string]$Printer, [byte[]]$Bytes)
-
-    $defaults = New-Object SpoolerRaw+PRINTER_DEFAULTS
-    $defaults.DesiredAccess = 0  # PRINTER_ACCESS_USE
+function Print-Unicode {
+    param([string]$Printer, [byte[]]$Bytes, [string]$Datatype)
 
     $hPrinter = [IntPtr]::Zero
-
-    $result = [SpoolerRaw]::OpenPrinter($Printer, [ref]$hPrinter, [ref]$defaults)
-    if (-not $result) {
-        $errCode = [SpoolerRaw]::GetLastError()
-        throw "OpenPrinter codigo:$errCode"
-    }
-
-    $docInfo = New-Object SpoolerRaw+DOC_INFO_1
-    $docInfo.pDocName = "PrinterBridge"
-    $docInfo.pOutputFile = $null
-    $docInfo.pDatatype = $null
+    $result = [SpoolerPrint]::OpenPrinter($Printer, [ref]$hPrinter, [IntPtr]::Zero)
+    if (-not $result) { throw "OpenPrinter codigo:$([SpoolerPrint]::GetLastError())" }
 
     try {
+        $docInfo = New-Object SpoolerPrint+DOC_INFO_1W
+        $docInfo.pDocName = "PrinterBridge"
+        $docInfo.pOutputFile = $null
+        $docInfo.pDatatype = $Datatype
+
         $written = 0
 
-        $result = [SpoolerRaw]::StartDocPrinter($hPrinter, 1, [ref]$docInfo)
+        $result = [SpoolerPrint]::StartDocPrinter($hPrinter, 1, [ref]$docInfo)
         if (-not $result) {
-            $errCode = [SpoolerRaw]::GetLastError()
+            $errCode = [SpoolerPrint]::GetLastError()
             throw "StartDocPrinter codigo:$errCode"
         }
 
-        $result = [SpoolerRaw]::StartPagePrinter($hPrinter)
+        $result = [SpoolerPrint]::StartPagePrinter($hPrinter)
         if (-not $result) {
-            $errCode = [SpoolerRaw]::GetLastError()
-            [SpoolerRaw]::EndDocPrinter($hPrinter) | Out-Null
+            $errCode = [SpoolerPrint]::GetLastError()
+            [SpoolerPrint]::EndDocPrinter($hPrinter) | Out-Null
             throw "StartPagePrinter codigo:$errCode"
         }
 
-        $result = [SpoolerRaw]::WritePrinter($hPrinter, $Bytes, $Bytes.Length, [ref]$written)
+        $result = [SpoolerPrint]::WritePrinter($hPrinter, $Bytes, $Bytes.Length, [ref]$written)
         if (-not $result) {
-            $errCode = [SpoolerRaw]::GetLastError()
-            [SpoolerRaw]::EndPagePrinter($hPrinter) | Out-Null
-            [SpoolerRaw]::EndDocPrinter($hPrinter) | Out-Null
+            $errCode = [SpoolerPrint]::GetLastError()
+            [SpoolerPrint]::EndPagePrinter($hPrinter) | Out-Null
+            [SpoolerPrint]::EndDocPrinter($hPrinter) | Out-Null
             throw "WritePrinter codigo:$errCode"
         }
 
-        [SpoolerRaw]::EndPagePrinter($hPrinter) | Out-Null
-        [SpoolerRaw]::EndDocPrinter($hPrinter) | Out-Null
-
+        [SpoolerPrint]::EndPagePrinter($hPrinter) | Out-Null
+        [SpoolerPrint]::EndDocPrinter($hPrinter) | Out-Null
         return @{ success = $true; bytes = $written }
-
     } finally {
-        if ($hPrinter -ne [IntPtr]::Zero) {
-            [SpoolerRaw]::ClosePrinter($hPrinter) | Out-Null
-        }
+        if ($hPrinter -ne [IntPtr]::Zero) { [SpoolerPrint]::ClosePrinter($hPrinter) | Out-Null }
     }
 }
 
 # ============================================================
-# Ejecucion principal - intentar metodos en orden
+# Ejecucion principal
 # ============================================================
-$lastError = $null
+$errors = @()
 
-# --- Metodo 1: RAW ---
+# --- 1. Unicode + RAW (Zebra) ---
 try {
-    $r = Print-TryRaw -Printer $PrinterName -Bytes $data -Datatype "RAW"
+    $r = Print-Unicode -Printer $PrinterName -Bytes $data -Datatype "RAW"
     if ($r.success) { Write-Output "OK:$($r.bytes)"; exit 0 }
-} catch { $lastError = "RAW: $($_.Exception.Message)" }
+} catch { $errors += "Uni+RAW: $($_.Exception.Message)" }
 
-# --- Metodo 2: datatype null (Windows elige) ---
+# --- 2. ANSI + RAW (Datamax) ---
 try {
-    $r = Print-TryRaw -Printer $PrinterName -Bytes $data -Datatype $null
+    $r = Print-ANSI -Printer $PrinterName -Bytes $data -Datatype "RAW"
     if ($r.success) { Write-Output "OK:$($r.bytes)"; exit 0 }
-} catch { $lastError = "Null: $($_.Exception.Message)" }
+} catch { $errors += "ANSI+RAW: $($_.Exception.Message)" }
 
-# --- Metodo 3: PRINTER_DEFAULTS + datatype null ---
+# --- 3. ANSI + null ---
 try {
-    $r = Print-TryDefaults -Printer $PrinterName -Bytes $data
+    $r = Print-ANSI -Printer $PrinterName -Bytes $data -Datatype $null
     if ($r.success) { Write-Output "OK:$($r.bytes)"; exit 0 }
-} catch { $lastError = "Defaults: $($_.Exception.Message)" }
+} catch { $errors += "ANSI+null: $($_.Exception.Message)" }
 
-# --- Metodo 4: comando `print` de Windows ---
+# --- 4. Unicode + null ---
 try {
-    $printOutput = & print.exe /d:"$PrinterName" $FilePath 2>&1
-    $printExit = $LASTEXITCODE
-    if ($printExit -eq 0 -or $printExit -eq $null) {
-        Write-Output "OK:$fileSize"
-        exit 0
-    }
-    $lastError = "print.exe: exit code $printExit"
-} catch { $lastError = "print.exe: $($_.Exception.Message)" }
+    $r = Print-Unicode -Printer $PrinterName -Bytes $data -Datatype $null
+    if ($r.success) { Write-Output "OK:$($r.bytes)"; exit 0 }
+} catch { $errors += "Uni+null: $($_.Exception.Message)" }
+
+# --- 5. print.exe ---
+try {
+    $out = cmd /c "print /d:`"$PrinterName`" `"$FilePath`"" 2>&1
+    if ($LASTEXITCODE -le 1) { Write-Output "OK:$fileSize"; exit 0 }
+    $errors += "print.exe: exit $LASTEXITCODE"
+} catch { $errors += "print.exe: $($_.Exception.Message)" }
 
 # Todos fallaron
-Write-Output "ERROR:Ningun metodo de impresion funciono."
-Write-Output "  Metodo 1 (RAW): $($lastError -split "`n")[0]"
-Write-Output "  Metodo 2 (null): $($lastError -split "`n")[1]"
-Write-Output "  Metodo 3 (defaults): $($lastError -split "`n")[2]"
-Write-Output "  Metodo 4 (print.exe): $($lastError -split "`n")[3]"
-Write-Output ""
-Write-Output "Verificá que la impresora este encendida, conectada y sin trabajos atascados."
+Write-Output "ERROR:Ningun metodo funciono. Detalles:"
+foreach ($e in $errors) { Write-Output "  $e" }
 exit 1
