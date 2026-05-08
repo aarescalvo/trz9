@@ -224,22 +224,28 @@ def get_printer_port(printer_name):
 
 def print_raw(printer_name, data):
     """
-    Imprimir datos DPL en la impresora Datamax.
+    Imprimir datos DPL en la impresora Datamax via win32print RAW.
 
-    Estrategia:
-    1. Escribir datos a archivo .itf temporal
-    2. Enviar via win32print RAW (bytes directos al printer spooler)
-    3. Fallback: os.startfile (usa asociacion .itf con driver)
-    4. Fallback: PowerShell
+    Equivalente a 'copy archivo lpt1 /b' del sistema viejo.
+    win32print con datatype RAW envia bytes directos al puerto USB.
+
+    Comprobado: v3.0.9 imprimio etiqueta (en blanco) con este metodo.
+    Necesita STX(0x02) al inicio y ETX(0x03) antes del comando E.
 
     Args:
         printer_name: Nombre exacto de la impresora en Windows
         data: bytes o str con los datos (DPL) a imprimir
 
     Returns:
-        dict con {success: bool, bytes_written: int, error: str, method: str}
+        dict con {success: bool, bytes_written: int, error: str}
     """
-    import uuid
+    win32print = try_import_win32print()
+
+    if not win32print:
+        return {
+            'success': False,
+            'error': 'pywin32 no esta instalado. Ejecuta: pip install pywin32'
+        }
 
     if isinstance(data, str):
         data = data.encode('latin-1', errors='replace')
@@ -247,86 +253,56 @@ def print_raw(printer_name, data):
     if len(data) == 0:
         return {'success': False, 'error': 'Datos vacios'}
 
-    # Generar archivo .itf temporal
-    job_id = uuid.uuid4().hex[:8]
-    filename = 'print-job-{}.itf'.format(job_id)
-    filepath = os.path.join(TEMP_DIR, filename)
-
     try:
-        with open(filepath, 'wb') as f:
-            f.write(data)
-        log('debug', 'Archivo ITF creado: {} ({} bytes)'.format(filepath, len(data)))
-    except Exception as e:
-        log('error', 'Error creando archivo ITF: {}'.format(e))
-        return {'success': False, 'error': 'Error creando archivo temporal: {}'.format(e)}
-
-    # === METODO 1: win32print RAW (bytes directos, sin procesar por driver) ===
-    win32print = try_import_win32print()
-    if win32print:
+        hPrinter = win32print.OpenPrinter(printer_name)
         try:
-            hPrinter = win32print.OpenPrinter(printer_name)
+            # DOC_INFO_1 con RAW = bytes directos al puerto (sin procesar por driver)
+            docInfo = ['PrinterBridge', None, 'RAW']
+            win32print.StartDocPrinter(hPrinter, 1, docInfo)
             try:
-                docInfo = ['PrinterBridge', None, 'RAW']
-                win32print.StartDocPrinter(hPrinter, 1, docInfo)
+                win32print.StartPagePrinter(hPrinter)
                 try:
-                    win32print.StartPagePrinter(hPrinter)
-                    try:
-                        # Leer el archivo y enviar como bytes RAW
-                        with open(filepath, 'rb') as f:
-                            file_data = f.read()
-                        written = win32print.WritePrinter(hPrinter, file_data)
-                        win32print.EndPagePrinter(hPrinter)
-                        win32print.EndDocPrinter(hPrinter)
-                        log('info', 'Impresion OK (win32print RAW) - {} bytes -> "{}"'.format(written, printer_name))
-                        return {'success': True, 'bytes_written': written, 'method': 'win32print'}
-                    except Exception as e2:
-                        try:
-                            win32print.EndPagePrinter(hPrinter)
-                        except:
-                            pass
-                        log('error', 'win32print WritePrinter fallo: {}'.format(e2))
-                        raise e2
+                    written = win32print.WritePrinter(hPrinter, data)
+                    win32print.EndPagePrinter(hPrinter)
+                    win32print.EndDocPrinter(hPrinter)
+
+                    log('info', 'Impresion OK - {} bytes -> "{}"'.format(written, printer_name))
+                    return {'success': True, 'bytes_written': written}
+
                 except Exception as e2:
                     try:
-                        win32print.EndDocPrinter(hPrinter)
+                        win32print.EndPagePrinter(hPrinter)
                     except:
                         pass
                     raise e2
-            finally:
-                win32print.ClosePrinter(hPrinter)
-        except Exception as e:
-            log('debug', 'win32print RAW fallo: {}'.format(e))
 
-    # === METODO 2: os.startfile (usa la asociacion de .itf con el driver) ===
-    try:
-        os.startfile(filepath, 'print')
-        log('info', 'Impresion OK (startfile) - {} bytes -> "{}"'.format(len(data), printer_name))
-        return {'success': True, 'bytes_written': len(data), 'method': 'startfile'}
+            except Exception as e2:
+                try:
+                    win32print.EndDocPrinter(hPrinter)
+                except:
+                    pass
+                raise e2
+
+        finally:
+            win32print.ClosePrinter(hPrinter)
+
     except Exception as e:
-        log('debug', 'startfile fallo: {}'.format(e))
+        err_msg = str(e)
+        err_code = None
+        if hasattr(e, 'winerror'):
+            err_code = e.winerror
+        elif hasattr(e, 'args') and len(e.args) > 0:
+            err_code = e.args[0] if isinstance(e.args[0], int) else None
 
-    # === METODO 3: PowerShell (envia archivo al spooler) ===
-    try:
-        # Leer archivo y enviar como bytes via PowerShell al puerto de la impresora
-        ps_cmd = (
-            'Start-Process -FilePath "{}" -Verb Print -PassThru | Wait-Process'.format(filepath)
-        )
-        result = subprocess.run(
-            ['powershell', '-NoProfile', '-Command', ps_cmd],
-            capture_output=True, timeout=30
-        )
-        if result.returncode == 0:
-            log('info', 'Impresion OK (PowerShell Start-Process) - {} bytes'.format(len(data)))
-            return {'success': True, 'bytes_written': len(data), 'method': 'powershell'}
-    except Exception as e:
-        log('debug', 'PowerShell fallo: {}'.format(e))
+        if err_code == 5:
+            err_msg = 'Acceso denegado. Ejecuta como Administrador.'
+        elif err_code in (1801, 2):
+            err_msg = 'Impresora "{}" no encontrada.'.format(printer_name)
+        elif err_code == 3015:
+            err_msg = 'La impresora esta pausada.'
 
-    # Ningun metodo funciono
-    log('error', 'Todos los metodos de impresion fallaron')
-    return {
-        'success': False,
-        'error': 'No se pudo imprimir. Verifica que el driver Datamax este instalado y la impresora encendida.'
-    }
+        log('error', 'Error imprimiendo: {}'.format(err_msg))
+        return {'success': False, 'error': err_msg}
 
 
 # ============================================================
@@ -833,9 +809,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     "^XZ"
                 ).format(fecha=now)
             else:
-                # Etiqueta de prueba DPL - Formato exacto del sistema viejo de trazabilidad
-                # Basado en ANIMAL INDIVIDUAL.itf comprobado que funciona
+                # Etiqueta de prueba DPL
+                # win32print RAW necesita STX(0x02) al inicio y ETX(0x03) antes de E
+                # Contenido DPL basado en el sistema viejo de trazabilidad (EtiHac.trz)
                 test_data = (
+                    "\x02"          # STX - inicio (requerido por win32print RAW)
+                    "n\n"
                     "M1084\n"
                     "O0220\n"
                     "SO\n"
@@ -854,6 +833,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     "1911A1201210110Datamax Mark II\n"
                     "1911A1201540110" + now + "\n"
                     "Q0001\n"
+                    "\x03"          # ETX - fin (requerido por win32print RAW)
                     "E\n"
                 )
 
