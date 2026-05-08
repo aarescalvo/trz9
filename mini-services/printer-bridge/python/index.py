@@ -822,18 +822,24 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 ).format(fecha=now)
             else:
                 # Etiqueta de prueba DPL (compatible Datamax Mark II)
-                # STX = 0x02 (inicio), ETX = 0x03 (fin)
-                # Comando T: T,X,Y,font,height,width,style,"TEXT"
-                # Mismo formato que los rotulos del sistema TrazAlan
+                # Formato DPL basado en el sistema viejo de trazabilidad (comprobado que funciona)
+                # 19 + font(2) + estilo(2) + x(3) + y(3) + ancho(3) + alto(1) + texto
                 test_data = (
-                    "\x02L\n"
+                    "M1084\n"
+                    "O0220\n"
+                    "SO\n"
+                    "d\n"
+                    "L\n"
                     "D11\n"
-                    "H0030\n"
-                    "T10,10,3,60,40,N,\"SOLEMAR ALIMENTARIA\"\n"
-                    "T10,80,3,40,30,N,\"** PRUEBA **\"\n"
-                    "T10,140,3,30,20,N,\"Printer Bridge v3.0\"\n"
-                    "T10,190,3,30,20,N,\"Datamax Mark II\"\n"
-                    "T10,240,3,20,15,N,\"" + now + "\"\n"
+                    "PO\n"
+                    "pG\n"
+                    "SO\n"
+                    "1911A1200200010SOLEMAR ALIMENTARIA\n"
+                    "1911A1200500010** PRUEBA **\n"
+                    "1911A1200800010Printer Bridge v3.0\n"
+                    "1911A1201100010Datamax Mark II\n"
+                    "1911A1201400010" + now + "\n"
+                    "Q0001\n"
                     "\x03E"
                 )
 
