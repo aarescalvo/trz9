@@ -291,6 +291,32 @@ model Transportista {
   pesajes   PesajeCamion[]
 }
 
+// ==================== PRODUCTORES / CONSIGNATARIOS ====================
+
+model ProductorConsignatario {
+  id                    String        @id @default(cuid())
+  nombre                String
+  cuit                  String?
+  direccion             String?
+  telefono              String?
+  email                 String?
+  tipo                  TipoProductor @default(PRODUCTOR)
+  numeroRenspa          String?
+  numeroEstablecimiento String?
+  localidad             String?
+  provincia             String?
+  observaciones         String?
+  activo                Boolean       @default(true)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+}
+
+enum TipoProductor {
+  PRODUCTOR
+  CONSIGNATARIO
+  AMBOS
+}
+
 // ==================== TABLAS DE CÓDIGOS ====================
 
 model CodigoEspecie {
