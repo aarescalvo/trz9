@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { TipoComprobante } from '@prisma/client'
 import { 
   FECAESolicitar, 
   FECompUltimoAutorizado,
@@ -92,8 +93,8 @@ export async function POST(request: NextRequest) {
 
     // Modo real: conectar con AFIP
     // Determinar tipo de comprobante según el cliente
-    const tipoComprobante = factura.tipoComprobante || 
-      determinarTipoComprobante(factura.cliente.cuit, true)
+    const tipoComprobante: TipoComprobante = factura.tipoComprobante || 
+      determinarTipoComprobante(factura.cliente.cuit, true) as TipoComprobante
 
     // Obtener último número de comprobante
     const ultimoNumero = await FECompUltimoAutorizado(

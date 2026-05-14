@@ -1228,6 +1228,7 @@ model Factura {
   tipoComprobante   TipoComprobante?  // Tipo de comprobante AFIP (A, B, C, etc.)
   puntoVenta        Int?          // Punto de venta (1-9999)
   numeroComprobante String?       // Número de comprobante AFIP
+  numeroAfip        String?       // Número AFIP completo
   cae               String?       // Código de Autorización Electrónico
   caeVencimiento    DateTime?     // Vencimiento del CAE (fechaVencimientoCAE en código)
   fechaEmisionAFIP  DateTime?     // Fecha de emisión en AFIP
