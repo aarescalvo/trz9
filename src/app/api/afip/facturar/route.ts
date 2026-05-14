@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     // Modo real: conectar con AFIP
     // Determinar tipo de comprobante según el cliente
     const tipoComprobante: TipoComprobante = factura.tipoComprobante || 
-      determinarTipoComprobante(factura.cliente.cuit, true) as TipoComprobante
+      determinarTipoComprobante(factura.cliente.cuit, true) as unknown as TipoComprobante
 
     // Obtener último número de comprobante
     const ultimoNumero = await FECompUltimoAutorizado(
