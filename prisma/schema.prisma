@@ -3021,9 +3021,9 @@ model ArqueoCaja {
   cajaId        String
   caja          Caja      @relation(fields: [cajaId], references: [id])
   fecha         DateTime  @default(now())
-  saldoSistema  Decimal @db.Decimal(12, 2)
-  saldoFisico   Decimal @db.Decimal(12, 2)
-  diferencia    Decimal @db.Decimal(12, 2)
+  saldoSistema  Float
+  saldoFisico   Float
+  diferencia    Float
   estado        String    @default("PENDIENTE")
   observaciones String?
   operadorId    String?
@@ -3090,8 +3090,8 @@ model AsientoContableLinea {
   nombreCuenta String // Nombre denormalizado de la cuenta
 
   // Valores contables
-  debe  Decimal @default(0) @db.Decimal(12, 2)
-  haber Decimal @default(0) @db.Decimal(12, 2)
+  debe  Float @default(0)
+  haber Float @default(0)
 
   // Auxiliar opcional (centro de costo, tercero, etc.)
   auxiliarCodigo String?
@@ -3163,11 +3163,11 @@ model BalanceInsumos {
   fechaHasta      DateTime
   centroCostoId   String?
   centroCosto     CentroCosto? @relation(fields: [centroCostoId], references: [id])
-  consumoTotal    Decimal        @default(0) @db.Decimal(12, 2)
+  consumoTotal    Float @default(0)
   kgProducidos    Float        @default(0)
   cabezasFaenadas Int          @default(0)
-  costoPorKg      Decimal? @db.Decimal(12, 2)
-  costoPorCabeza  Decimal? @db.Decimal(12, 2)
+  costoPorKg      Float?
+  costoPorCabeza  Float?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
@@ -3389,7 +3389,7 @@ model C2ProductoDesposte {
   pesoTaraCaja Float? // Peso de la caja/bolsa (tara)
 
   // Precios (para facturación de cortes)
-  precioKg Decimal? @db.Decimal(12, 2) // Precio por KG
+  precioKg Float? // Precio por KG
 
   // Reportes
   apareceRendimiento Boolean @default(true) // Aparece en reporte de rinde
@@ -3479,7 +3479,7 @@ model Caja {
   id               String          @id @default(cuid())
   nombre           String
   tipo             String
-  saldoActual      Decimal           @default(0) @db.Decimal(12, 2)
+  saldoActual      Float @default(0)
   cuentaBancariaId String?
   cuentaBancaria   CuentaBancaria? @relation(fields: [cuentaBancariaId], references: [id])
   activo           Boolean         @default(true)
@@ -3507,7 +3507,7 @@ model CentroCosto {
   descripcion        String?
   tipo               String
   responsable        String?
-  presupuestoMensual Decimal? @db.Decimal(12, 2)
+  presupuestoMensual Float?
   activo             Boolean  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -3526,7 +3526,7 @@ model Cheque {
   id               String          @id @default(cuid())
   numero           String
   banco            String
-  monto            Decimal @db.Decimal(12, 2)
+  monto            Float
   fechaEmision     DateTime        @default(now())
   fechaVencimiento DateTime
   fechaCobro       DateTime?
@@ -3574,8 +3574,8 @@ model ConciliacionBancaria {
   fechaHasta       DateTime
   nombreArchivo    String
   totalRegistros   Int            @default(0)
-  totalDebitos     Decimal          @default(0) @db.Decimal(12, 2)
-  totalCreditos    Decimal          @default(0) @db.Decimal(12, 2)
+  totalDebitos     Float @default(0)
+  totalCreditos    Float @default(0)
   conciliados      Int            @default(0)
   pendientes       Int            @default(0)
   diferencias      Int            @default(0)
@@ -3752,7 +3752,7 @@ model ConsumoCentro {
   concepto      String
   categoria     String?
   cantidad      Float?
-  monto         Decimal @db.Decimal(12, 2)
+  monto         Float
   observaciones String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -3768,8 +3768,8 @@ model ConsumoInsumo {
   centroCostoId     String?
   centroCosto       CentroCosto? @relation(fields: [centroCostoId], references: [id])
   cantidad          Float
-  costoUnitario     Decimal? @db.Decimal(12, 2)
-  costoTotal        Decimal? @db.Decimal(12, 2)
+  costoUnitario     Float?
+  costoTotal        Float?
   tropaId           String?
   produccionFecha   DateTime?
   cantidadProducida Float?
@@ -3791,7 +3791,7 @@ model CostoFaena {
   nombre      String
   descripcion String?
   tipo        String
-  monto       Decimal @db.Decimal(12, 2)
+  monto       Float
   monedaId    String?
   aplicaA     String    @default("TODOS")
   fechaDesde  DateTime  @default(now())
@@ -3813,8 +3813,8 @@ model CostoFaenaAplicado {
   costoFaenaId  String
   costoFaena    CostoFaena @relation(fields: [costoFaenaId], references: [id])
   cantidad      Int        @default(1)
-  montoUnitario Decimal @db.Decimal(12, 2)
-  montoTotal    Decimal @db.Decimal(12, 2)
+  montoUnitario Float
+  montoTotal    Float
   observaciones String?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
@@ -3827,8 +3827,8 @@ model Cotizacion {
   id       String   @id @default(cuid())
   monedaId String
   moneda   Moneda   @relation(fields: [monedaId], references: [id])
-  compra   Decimal @db.Decimal(12, 2)
-  venta    Decimal @db.Decimal(12, 2)
+  compra   Float
+  venta    Float
   fuente   String   @default("MANUAL")
   fecha    DateTime @default(now())
 
@@ -3842,8 +3842,8 @@ model CuentaBancaria {
   numeroCuenta    String
   cbu             String?  @unique
   alias           String?
-  saldoActual     Decimal    @default(0) @db.Decimal(12, 2)
-  saldoConciliado Decimal    @default(0) @db.Decimal(12, 2)
+  saldoActual     Float @default(0)
+  saldoConciliado Float @default(0)
   titular         String?
   cuitTitular     String?
   activo          Boolean  @default(true)
@@ -3955,11 +3955,11 @@ model DetalleConciliacion {
   fechaExtracto       DateTime
   descripcionExtracto String
   referenciaExtracto  String?
-  montoExtracto       Decimal @db.Decimal(12, 2)
+  montoExtracto       Float
   tipoExtracto        String
   estado              String               @default("PENDIENTE")
   confianza           Float? // Score de confianza del matching
-  montoAjuste         Decimal? @db.Decimal(12, 2)
+  montoAjuste         Float?
   observaciones       String?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -3977,8 +3977,8 @@ model DetalleInventario {
   cantidadSistema Float      @default(0)
   cantidadFisica  Float      @default(0)
   diferencia      Float      @default(0)
-  costoUnitario   Decimal? @db.Decimal(12, 2)
-  costoDiferencia Decimal? @db.Decimal(12, 2)
+  costoUnitario   Float?
+  costoDiferencia Float?
   estado          String?
   observaciones   String?
   createdAt       DateTime   @default(now())
@@ -3994,8 +3994,8 @@ model DetalleNotaCredito {
   notaCredito    NotaCredito @relation(fields: [notaCreditoId], references: [id], onDelete: Cascade)
   descripcion    String
   cantidad       Float       @default(1)
-  precioUnitario Decimal       @default(0) @db.Decimal(12, 2)
-  subtotal       Decimal @db.Decimal(12, 2)
+  precioUnitario Float @default(0)
+  subtotal       Float
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 }
@@ -4006,8 +4006,8 @@ model DetalleNotaDebito {
   notaDebito     NotaDebito @relation(fields: [notaDebitoId], references: [id], onDelete: Cascade)
   descripcion    String
   cantidad       Float      @default(1)
-  precioUnitario Decimal      @default(0) @db.Decimal(12, 2)
-  subtotal       Decimal @db.Decimal(12, 2)
+  precioUnitario Float @default(0)
+  subtotal       Float
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 }
@@ -4020,8 +4020,8 @@ model DetalleOrdenCompra {
   insumo           Insumo             @relation(fields: [insumoId], references: [id])
   cantidadPedida   Float
   cantidadRecibida Float              @default(0)
-  precioUnitario   Decimal @db.Decimal(12, 2)
-  subtotal         Decimal @db.Decimal(12, 2)
+  precioUnitario   Float
+  subtotal         Float
   centroCostoId    String?
   centroCosto      CentroCosto?       @relation(fields: [centroCostoId], references: [id])
   estado           EstadoDetalleOrden @default(PENDIENTE)
@@ -4067,9 +4067,9 @@ model FacturaTributo {
   descripcion String // "Percepción IIBB CABA", "Retención Ganancias", etc.
 
   // Cálculo
-  baseImponible Decimal @default(0) @db.Decimal(12, 2)
+  baseImponible Float @default(0)
   alicuota      Float @default(0) // Porcentaje
-  importe       Decimal @default(0) @db.Decimal(12, 2) // Monto calculado
+  importe       Float @default(0) // Monto calculado
 
   createdAt DateTime @default(now())
 
@@ -4195,8 +4195,8 @@ model HistorialPrecioInsumo {
   id             String  @id @default(cuid())
   insumoId       String
   insumo         Insumo  @relation(fields: [insumoId], references: [id])
-  precioAnterior Decimal? @db.Decimal(12, 2)
-  precioNuevo    Decimal? @db.Decimal(12, 2)
+  precioAnterior Float?
+  precioNuevo    Float?
   moneda         String  @default("ARS")
   motivo         String? // "Actualización manual", "Ingreso compra", "Ajuste"
   operadorId     String?
@@ -4211,8 +4211,8 @@ model HistoricoPrecio {
   id                 String            @id @default(cuid())
   productoVendibleId String?
   productoVendible   ProductoVendible? @relation(fields: [productoVendibleId], references: [id])
-  precioAnterior     Decimal? @db.Decimal(12, 2)
-  precioNuevo        Decimal @db.Decimal(12, 2)
+  precioAnterior     Float?
+  precioNuevo        Float
   moneda             String            @default("ARS")
   fechaVigencia      DateTime          @default(now())
   motivo             String?
@@ -4228,8 +4228,8 @@ model HistoricoPrecioProducto {
   id                 String           @id @default(cuid())
   productoVendibleId String
   productoVendible   ProductoVendible @relation(fields: [productoVendibleId], references: [id])
-  precioAnterior     Decimal? @db.Decimal(12, 2)
-  precioNuevo        Decimal @db.Decimal(12, 2)
+  precioAnterior     Float?
+  precioNuevo        Float
   moneda             String           @default("ARS")
   motivo             String?
   fechaVigencia      DateTime         @default(now())
@@ -4255,7 +4255,7 @@ model HistoricoTarifa {
   categoria String? // NOVILLO, VACA, etc.; null = todas
 
   // Precio y vigencia
-  valor         Decimal @db.Decimal(12, 2) // precio en pesos
+  valor         Float // precio en pesos
   moneda        String    @default("ARS")
   vigenciaDesde DateTime // desde cuándo aplica
   vigenciaHasta DateTime? // null = vigente actualmente
@@ -4409,7 +4409,7 @@ model Inventario {
   observaciones      String?
   itemsTotal         Int              @default(0)
   itemsConDiferencia Int              @default(0)
-  valorDiferencia    Decimal? @db.Decimal(12, 2)
+  valorDiferencia    Float?
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 
@@ -4453,16 +4453,16 @@ model LiquidacionFaena {
 
   // Tarifa aplicada (congelada)
   tarifaFaenaId    String? // referencia al HistoricoTarifa usado
-  tarifaFaenaValor Decimal @db.Decimal(12, 2) // valor copiado (no depender del histórico para recalcular)
+  tarifaFaenaValor Float // valor copiado (no depender del histórico para recalcular)
 
   // Conceptos adicionales
   items LiquidacionItem[]
 
   // Totales calculados
-  subtotalNeto     Decimal @default(0) @db.Decimal(12, 2)
-  totalIVA         Decimal @default(0) @db.Decimal(12, 2)
-  totalRetenciones Decimal @default(0) @db.Decimal(12, 2)
-  totalFinal       Decimal @default(0) @db.Decimal(12, 2)
+  subtotalNeto     Float @default(0)
+  totalIVA         Float @default(0)
+  totalRetenciones Float @default(0)
+  totalFinal       Float @default(0)
 
   // Estado
   estado String @default("BORRADOR") // BORRADOR, EMITIDA, ANULADA
@@ -4496,10 +4496,10 @@ model LiquidacionItem {
   descripcion  String
   unidad       String  @default("POR_KG") // POR_KG, POR_CABEZA, FIJO
   cantidad     Float   @default(0) // kg, cabezas, o 1 si es fijo
-  tarifaValor  Decimal   @default(0) @db.Decimal(12, 2) // valor congelado
-  subtotal     Decimal   @default(0) @db.Decimal(12, 2)
+  tarifaValor  Float @default(0) // valor congelado
+  subtotal     Float @default(0)
   alicuotaIVA  Float   @default(21) // 0, 10.5, 21
-  importeIVA   Decimal   @default(0) @db.Decimal(12, 2)
+  importeIVA   Float @default(0)
 
   esDescuento Boolean @default(false) // para cueros/menudencias cedidos como pago parcial
 
@@ -4572,9 +4572,9 @@ model MovimientoCaja {
   cajaId          String
   caja            Caja      @relation(fields: [cajaId], references: [id])
   tipo            String
-  monto           Decimal @db.Decimal(12, 2)
-  saldoAnterior   Decimal @db.Decimal(12, 2)
-  saldoNueva      Decimal @db.Decimal(12, 2)
+  monto           Float
+  saldoAnterior   Float
+  saldoNueva      Float
   documentoTipo   String?
   documentoId     String?
   documentoNumero String?
@@ -4607,8 +4607,8 @@ model MovimientoInsumo {
   depositoDestino   Deposito?            @relation("DepositoDestinoInsumo", fields: [depositoDestinoId], references: [id])
   cantidad          Float
   loteInsumoId      String?
-  precioUnitario    Decimal? @db.Decimal(12, 2)
-  costoTotal        Decimal? @db.Decimal(12, 2)
+  precioUnitario    Float?
+  costoTotal        Float?
   documentoTipo     String?
   documentoNumero   String?
   centroCostoId     String?
@@ -4634,9 +4634,9 @@ model NotaCredito {
   facturaId     String?
   factura       Factura?   @relation(fields: [facturaId], references: [id])
   fecha         DateTime   @default(now())
-  subtotal      Decimal      @default(0) @db.Decimal(12, 2)
-  iva           Decimal      @default(0) @db.Decimal(12, 2)
-  total         Decimal      @default(0) @db.Decimal(12, 2)
+  subtotal      Float @default(0)
+  iva           Float @default(0)
+  total         Float @default(0)
   motivo        String
   estado        EstadoNota @default(EMITIDA)
   observaciones String?
@@ -4675,9 +4675,9 @@ model NotaCreditoDebito {
   caeVencimiento DateTime?
 
   // Totales
-  subtotal Decimal @default(0) @db.Decimal(12, 2)
-  iva      Decimal @default(0) @db.Decimal(12, 2)
-  total    Decimal @default(0) @db.Decimal(12, 2)
+  subtotal Float @default(0)
+  iva      Float @default(0)
+  total    Float @default(0)
 
   // Estado
   estado String @default("EMITIDA") // EMITIDA, ANULADA
@@ -4704,9 +4704,9 @@ model NotaDebito {
   facturaId     String?
   factura       Factura?   @relation(fields: [facturaId], references: [id])
   fecha         DateTime   @default(now())
-  subtotal      Decimal      @default(0) @db.Decimal(12, 2)
-  iva           Decimal      @default(0) @db.Decimal(12, 2)
-  total         Decimal      @default(0) @db.Decimal(12, 2)
+  subtotal      Float @default(0)
+  iva           Float @default(0)
+  total         Float @default(0)
   motivo        String
   estado        EstadoNota @default(EMITIDA)
   observaciones String?
@@ -4795,9 +4795,9 @@ model OrdenCompra {
   fechaEntrega   DateTime?
   fechaRecepcion DateTime?
   estado         EstadoOrdenCompra @default(PENDIENTE)
-  subtotal       Decimal             @default(0) @db.Decimal(12, 2)
-  iva            Decimal             @default(0) @db.Decimal(12, 2)
-  total          Decimal             @default(0) @db.Decimal(12, 2)
+  subtotal       Float @default(0)
+  iva            Float @default(0)
+  total          Float @default(0)
   observaciones  String?
   operadorId     String?
   operador       Operador?         @relation(fields: [operadorId], references: [id])
@@ -4821,7 +4821,7 @@ model Pago {
   terceroTipo   String
   formaPagoId   String?
   formaPago     FormaPago? @relation(fields: [formaPagoId], references: [id])
-  monto         Decimal @db.Decimal(12, 2)
+  monto         Float
   chequeId      String?
   cheque        Cheque?    @relation(fields: [chequeId], references: [id])
   fecha         DateTime   @default(now())
@@ -4847,7 +4847,7 @@ model PagoFactura {
 
   // Datos del pago
   fecha DateTime @default(now())
-  monto Decimal // Monto pagado
+  monto Float
 
   // Método de pago
   metodoPago String  @default("EFECTIVO") // EFECTIVO, TRANSFERENCIA, CHEQUE, TARJETA
@@ -4968,8 +4968,8 @@ model PrecioHistorial {
   clienteNombre      String // Snapshot del nombre
 
   // Cambio de precio
-  precioAnterior Decimal? // null si es creación
-  precioNuevo    Decimal // Precio establecido
+  precioAnterior Float? // null si es creación
+  precioNuevo    Float
 
   // Vigencia
   fechaDesde DateTime // Desde cuándo rige
@@ -4998,7 +4998,7 @@ model PrecioRendering {
   clienteId    String
   cliente      Cliente   @relation(fields: [clienteId], references: [id])
   tipoProducto String
-  precioKg     Decimal @db.Decimal(12, 2)
+  precioKg     Float
   fechaDesde   DateTime  @default(now())
   fechaHasta   DateTime?
   activo       Boolean   @default(true)
@@ -5019,7 +5019,7 @@ model PrecioServicio {
   cliente        Cliente      @relation(fields: [clienteId], references: [id])
 
   // Precio
-  precio Decimal // Precio por unidad
+  precio Float
 
   // Vigencia
   fechaDesde DateTime  @default(now())
@@ -5079,9 +5079,9 @@ model PresupuestoCentro {
   centroCosto   CentroCosto @relation(fields: [centroCostoId], references: [id])
   anio          Int
   mes           Int
-  presupuesto   Decimal       @default(0) @db.Decimal(12, 2)
-  ejecutado     Decimal       @default(0) @db.Decimal(12, 2)
-  desviacion    Decimal? @db.Decimal(12, 2)
+  presupuesto   Float @default(0)
+  ejecutado     Float @default(0)
+  desviacion    Float?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -5107,10 +5107,10 @@ model ProductoVendible {
   delCuarto             String?
   tipoVenta             String   @default("POR_KG")
   descripcionCircular   String?
-  precioBase            Decimal? @db.Decimal(12, 2)
-  precioDolar           Decimal    @default(0) @db.Decimal(12, 2)
-  precioEuro            Decimal    @default(0) @db.Decimal(12, 2)
-  precioArs             Decimal    @default(0) @db.Decimal(12, 2)
+  precioBase            Float?
+  precioDolar           Float @default(0)
+  precioEuro            Float @default(0)
+  precioArs             Float @default(0)
   moneda                String   @default("ARS")
   alicuotaIva           Float    @default(21)
   producidoParaCliente  String?
@@ -5130,7 +5130,7 @@ model ProductoVendible {
   tipoCarne             String?
   activo                Boolean  @default(true)
   requiereTrazabilidad  Boolean  @default(false)
-  precioActual          Decimal    @default(0) @db.Decimal(12, 2)
+  precioActual          Float @default(0)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -5397,9 +5397,9 @@ model ResumenCostosFaena {
   listaFaena     ListaFaena @relation(fields: [listaFaenaId], references: [id])
   totalAnimales  Int?
   totalKg        Float?
-  costoTotal     Decimal      @default(0) @db.Decimal(12, 2)
-  costoPorKg     Decimal? @db.Decimal(12, 2)
-  costoPorAnimal Decimal? @db.Decimal(12, 2)
+  costoTotal     Float @default(0)
+  costoPorKg     Float?
+  costoPorAnimal Float?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 }
@@ -5555,8 +5555,8 @@ model StockInsumo {
   cantidad       Float     @default(0)
   cantidadMinima Float?
   cantidadMaxima Float?
-  precioPromedio Decimal? @db.Decimal(12, 2)
-  valorTotal     Decimal? @db.Decimal(12, 2)
+  precioPromedio Float?
+  valorTotal     Float?
   ultimoIngreso  DateTime?
   ultimaSalida   DateTime?
   createdAt      DateTime  @default(now())
@@ -5614,8 +5614,8 @@ model SubproductoIncomestible {
   fechaFaena    DateTime?
   destino       String?
   clienteId     String?
-  precioKg      Decimal? @db.Decimal(12, 2)
-  montoTotal    Decimal? @db.Decimal(12, 2)
+  precioKg      Float?
+  montoTotal    Float?
   estado        String    @default("DISPONIBLE")
   operadorId    String?
   fecha         DateTime  @default(now())

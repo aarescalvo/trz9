@@ -117,9 +117,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Calcular valores automáticamente
-    const saldoSistema: any = data.saldoSistema ?? caja.saldoActual
-    const saldoFisico: any = parseFloat(data.saldoFisico)
-    const diferencia: any = saldoFisico - saldoSistema
+    const saldoSistema = data.saldoSistema ?? caja.saldoActual
+    const saldoFisico = parseFloat(data.saldoFisico)
+    const diferencia = saldoFisico - saldoSistema
 
     const arqueo = await db.arqueoCaja.create({
       data: {
@@ -179,9 +179,9 @@ export async function PUT(request: NextRequest) {
     }
 
     // Calcular diferencia si se modifican los saldos
-    let saldoSistema: any = existente.saldoSistema
-    let saldoFisico: any = existente.saldoFisico
-    let diferencia: any = existente.diferencia
+    let saldoSistema = existente.saldoSistema
+    let saldoFisico = existente.saldoFisico
+    let diferencia = existente.diferencia
 
     if (data.saldoSistema !== undefined) {
       saldoSistema = parseFloat(data.saldoSistema)
@@ -308,7 +308,7 @@ export async function PATCH(request: NextRequest) {
 
     if (data.accion === 'aprobar') {
       // Si hay diferencia, crear movimiento de ajuste
-      if (Number(existente.diferencia) !== 0) {
+      if (existente.diferencia !== 0) {
         resultado = await db.$transaction(async (tx) => {
           const caja = await tx.caja.findUnique({
             where: { id: existente.cajaId }
