@@ -118,8 +118,8 @@ export async function POST(request: NextRequest) {
 
     // Calcular valores automáticamente
     const saldoSistema = data.saldoSistema ?? caja.saldoActual
-    const saldoFisico = parseFloat(data.saldoFisico)
-    const diferencia = saldoFisico - saldoSistema
+    const saldoFisico = parseFloat(data.saldoFisico) as any
+    const diferencia = saldoFisico - (saldoSistema as any)
 
     const arqueo = await db.arqueoCaja.create({
       data: {
@@ -184,12 +184,12 @@ export async function PUT(request: NextRequest) {
     let diferencia = existente.diferencia
 
     if (data.saldoSistema !== undefined) {
-      saldoSistema = parseFloat(data.saldoSistema)
+      saldoSistema = parseFloat(data.saldoSistema) as any
     }
     if (data.saldoFisico !== undefined) {
-      saldoFisico = parseFloat(data.saldoFisico)
+      saldoFisico = parseFloat(data.saldoFisico) as any
     }
-    diferencia = saldoFisico - saldoSistema
+    diferencia = (saldoFisico as any) - (saldoSistema as any)
 
     const arqueo = await db.arqueoCaja.update({
       where: { id: data.id },
