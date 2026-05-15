@@ -2085,8 +2085,8 @@ model Cuarto {
   @@index([loteDespostadaId])
 
 
-  // ==================== REVERSE RELATIONS (auto-added) ====================
-  tiposCuarto C2TipoCuarto[]
+  // ==================== REVERSE RELATIONS ====================
+  cajas CajaEmpaque[]
 }
 
 enum SiglaCuarto {
@@ -2244,10 +2244,9 @@ model CajaEmpaque {
   @@index([palletId])
 
 
-  // ==================== REVERSE RELATIONS (auto-added) ====================
+  // ==================== REVERSE RELATIONS ====================
   expedicionesItem C2ExpedicionItem[]
   degradaciones C2MovimientoDegradacion[] @relation("CajaDegradada")
-  productosDesposte C2ProductoDesposte[]
 }
 
 enum EstadoCaja {
