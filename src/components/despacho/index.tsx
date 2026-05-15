@@ -1027,15 +1027,15 @@ export function DespachoModule({ operador }: Props) {
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div>
                         <p className="text-xs text-stone-500">Peso Bruto</p>
-                        <p className="font-bold">{despachoSeleccionado.ticketPesaje.pesoBruto.toFixed(1)} kg</p>
+                        <p className="font-bold">{(despachoSeleccionado.ticketPesaje.pesoBruto ?? 0).toFixed(1)} kg</p>
                       </div>
                       <div>
                         <p className="text-xs text-stone-500">Peso Tara</p>
-                        <p className="font-bold">{despachoSeleccionado.ticketPesaje.pesoTara.toFixed(1)} kg</p>
+                        <p className="font-bold">{(despachoSeleccionado.ticketPesaje.pesoTara ?? 0).toFixed(1)} kg</p>
                       </div>
                       <div>
                         <p className="text-xs text-stone-500">Peso Neto</p>
-                        <p className="font-bold text-blue-700">{despachoSeleccionado.ticketPesaje.pesoNeto.toFixed(1)} kg</p>
+                        <p className="font-bold text-blue-700">{(despachoSeleccionado.ticketPesaje.pesoNeto ?? 0).toFixed(1)} kg</p>
                       </div>
                     </div>
                   </CardContent>

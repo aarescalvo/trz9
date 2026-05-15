@@ -266,7 +266,7 @@ model Operador {
   historialesPrecioInsumo HistorialPrecioInsumo[]
   historicosPrecio HistoricoPrecio[]
   historicosPrecioProducto HistoricoPrecioProducto[]
-  historicosTarifa HistoricoTarifa[]
+  historicoTarifasOperador HistoricoTarifa[] @relation("HistoricoTarifaOperador")
   ingresosDespostada IngresoDespostada[]
   ingresosTercero IngresoTercero[]
   liquidacionesSupervisor LiquidacionFaena[] @relation("LiquidacionSupervisor")
@@ -354,7 +354,7 @@ model Cliente {
   // ==================== REVERSE RELATIONS (auto-added) ====================
   expedicionesC2 C2ExpedicionOrden[]
   historicosPrecioProducto HistoricoPrecioProducto[]
-  historicosTarifa HistoricoTarifa[]
+  historicoTarifasCliente HistoricoTarifa[] @relation("HistoricoTarifaCliente")
   liquidacionesFaena LiquidacionFaena[]
   notasCredito NotaCredito[]
   notasDebito NotaDebito[]
@@ -502,6 +502,10 @@ model Tropa {
   
   // Pesaje individual (suma de animales pesados)
   pesoTotalIndividual Float?
+  
+  // Datos de faena
+  fechaFaena      DateTime?
+  kgGancho        Float?
   
   observaciones   String?
   fechaRecepcion  DateTime    @default(now())
@@ -4311,8 +4315,8 @@ model HistoricoTarifa {
 
   createdAt DateTime @default(now())
 
-  cliente  Cliente?  @relation(fields: [clienteId], references: [id])
-  operador Operador? @relation(fields: [operadorId], references: [id])
+  cliente  Cliente?  @relation("HistoricoTarifaCliente", fields: [clienteId], references: [id])
+  operador Operador? @relation("HistoricoTarifaOperador", fields: [operadorId], references: [id])
 
   @@index([tipoTarifaId, vigenciaDesde])
   @@index([clienteId, tipoTarifaId])

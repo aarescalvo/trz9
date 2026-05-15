@@ -385,7 +385,7 @@ export class PDFExporter {
       d.cantidadAnimales.toString(),
       `${d.pesoVivoTotal.toLocaleString('es-AR')} kg`,
       `${d.pesoFrioTotal.toLocaleString('es-AR')} kg`,
-      `${d.rinde.toFixed(2)}%`,
+      `${(d.rinde ?? 0).toFixed(2)}%`,
       d.observaciones || '-',
     ]);
 

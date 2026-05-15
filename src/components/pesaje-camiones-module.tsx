@@ -568,7 +568,7 @@ export function PesajeCamionesModule({ operador, onTropaCreada }: { operador: Op
         body: JSON.stringify({
           id: pesajeSeleccionado.id,
           pesoTara: taraForm,
-          pesoNeto: pesajeSeleccionado.pesoBruto - taraForm
+          pesoNeto: (pesajeSeleccionado.pesoBruto || 0) - taraForm
         })
       })
       

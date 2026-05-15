@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
         where,
         include: { 
           factura: { 
-            select: { id: true, numero: true, clienteNombre: true, clienteId: true, tipoComprobante: true } 
+            select: { id: true, numero: true, cliente: { select: { id: true, nombre: true, razonSocial: true } }, clienteId: true, tipoComprobante: true } 
           },
           operador: { select: { id: true, nombre: true } }
         },
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
         operadorId
       },
       include: {
-        factura: { select: { id: true, numero: true, clienteNombre: true } }
+        factura: { select: { id: true, numero: true, cliente: { select: { id: true, nombre: true, razonSocial: true } } } }
       }
     })
     
@@ -204,7 +204,7 @@ export async function PUT(request: NextRequest) {
     
     const notaExistente = await db.notaCreditoDebito.findUnique({
       where: { id },
-      include: { factura: { select: { id: true, numero: true, clienteNombre: true } } }
+      include: { factura: { select: { id: true, numero: true, cliente: { select: { id: true, nombre: true, razonSocial: true } } } } }
     })
     
     if (!notaExistente) {
@@ -225,7 +225,7 @@ export async function PUT(request: NextRequest) {
       where: { id },
       data: { estado: estado || 'ANULADA' },
       include: {
-        factura: { select: { id: true, numero: true, clienteNombre: true } }
+        factura: { select: { id: true, numero: true, cliente: { select: { id: true, nombre: true, razonSocial: true } } } }
       }
     })
     

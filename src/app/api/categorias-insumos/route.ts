@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       where.activo = true;
     }
 
-    const categorias = await db.categoriaInsumo.findMany({
+    const categorias = await db.categoriaInsumoTabla.findMany({
       where,
       orderBy: { nombre: 'asc' as const },
     });
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
 
-    const categoria = await db.categoriaInsumo.create({
+    const categoria = await db.categoriaInsumoTabla.create({
       data: {
         nombre: data.nombre,
         descripcion: data.descripcion,
@@ -60,7 +60,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'ID requerido' }, { status: 400 });
     }
 
-    const categoria = await db.categoriaInsumo.update({
+    const categoria = await db.categoriaInsumoTabla.update({
       where: { id: data.id },
       data: {
         nombre: data.nombre,
@@ -99,7 +99,7 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 });
     }
 
-    await db.categoriaInsumo.delete({
+    await db.categoriaInsumoTabla.delete({
       where: { id }
     });
 

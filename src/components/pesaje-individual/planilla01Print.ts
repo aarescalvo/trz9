@@ -287,7 +287,7 @@ export function imprimirPlanilla01(data: Planilla01Data) {
           <td class="empty-cell" rowspan="6" style="border: none;"></td>
           <td class="rinde-box">
             <div class="label">RINDE</div>
-            <div class="value">${(data.rinde * 100).toFixed(5)}</div>
+            <div class="value">${((data.rinde ?? 0) * 100).toFixed(5)}</div>
           </td>
         </tr>
         <tr>
@@ -367,7 +367,7 @@ export function imprimirPlanilla01(data: Planilla01Data) {
             </div>
             <div class="dato-row">
               <span class="dato-label">Rinde:</span>
-              <span class="dato-value">${(data.rinde * 100).toFixed(5)}</span>
+              <span class="dato-value">${((data.rinde ?? 0) * 100).toFixed(5)}</span>
             </div>
             <div class="dato-row">
               <span class="dato-label">Promedio:</span>
@@ -497,7 +497,7 @@ export function convertirRomaneoAPlanilla01(
   // Calcular totales
   const cantidadCabeza = romaneos.length
   const kgVivoEntrada = romaneos.reduce((acc, r) => acc + (r.pesoVivo || 0), 0)
-  const kgMediaRes = romaneos.reduce((acc, r) => acc + r.pesoMediaIzq + r.pesoMediaDer, 0)
+  const kgMediaRes = romaneos.reduce((acc, r) => acc + (r.pesoMediaIzq || 0) + (r.pesoMediaDer || 0), 0)
   const rinde = kgVivoEntrada > 0 ? kgMediaRes / kgVivoEntrada : 0
   const promedio = cantidadCabeza > 0 ? kgMediaRes / cantidadCabeza : 0
   
@@ -515,7 +515,7 @@ export function convertirRomaneoAPlanilla01(
     const tipo = r.tipoAnimal?.toUpperCase()
     if (cuartos[tipo as keyof typeof cuartos]) {
       cuartos[tipo as keyof typeof cuartos].cantidad++
-      cuartos[tipo as keyof typeof cuartos].kg += r.pesoMediaIzq + r.pesoMediaDer
+      cuartos[tipo as keyof typeof cuartos].kg += (r.pesoMediaIzq || 0) + (r.pesoMediaDer || 0)
     }
   })
   

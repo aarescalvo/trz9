@@ -718,7 +718,7 @@ export function CuarteoModule({ operador }: { operador: Operador }) {
                             <div className="flex flex-wrap gap-1">
                               {r.cuartos.map((c, i) => (
                                 <Badge key={i} variant="outline" className="text-xs bg-teal-50 text-teal-700 border-teal-200">
-                                  {c.tipoCuarto?.nombre || c.tipo}: {c.peso}kg
+                                  {c.tipoCuarto?.nombre || c.tipo}: {c.peso ?? 0}kg
                                 </Badge>
                               ))}
                             </div>
@@ -753,7 +753,7 @@ export function CuarteoModule({ operador }: { operador: Operador }) {
                                   r.cuartos!.forEach((c) => {
                                     impresora.imprimirRotulo({
                                       producto: c.tipoCuarto?.nombre || c.tipo,
-                                      peso: c.peso.toString(),
+                                      peso: (c.peso ?? 0).toString(),
                                       codigo: c.codigo,
                                       fecha: new Date(r.fecha).toLocaleDateString('es-AR'),
                                     }, 'cuarto')
@@ -807,7 +807,7 @@ export function CuarteoModule({ operador }: { operador: Operador }) {
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-xs text-stone-400">{c.codigo}</span>
                             <Badge variant="outline" className="bg-teal-50 text-teal-700">
-                              {c.peso} kg
+                              {c.peso ?? 0} kg
                             </Badge>
                           </div>
                         </div>

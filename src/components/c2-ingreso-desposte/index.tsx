@@ -124,7 +124,7 @@ export default function C2IngresoDesposteModule({ operador }: { operador: Operad
 
   const pesoTotalSeleccionado = cuartos
     .filter(c => seleccionados.has(c.id))
-    .reduce((sum, c) => sum + c.peso, 0)
+    .reduce((sum, c) => sum + (c.peso || 0), 0)
 
   // Tipos de cuarto únicos para filtro
   const tiposUnicos = [...new Set(cuartos.map(c => c.tipoCuarto?.id || c.tipo))]
@@ -359,7 +359,7 @@ export default function C2IngresoDesposteModule({ operador }: { operador: Operad
                             {c.tipoCuarto?.nombre || c.tipo}
                           </Badge>
                         </TableCell>
-                        <TableCell className="font-medium">{c.peso.toFixed(1)} kg</TableCell>
+                        <TableCell className="font-medium">{(c.peso ?? 0).toFixed(1)} kg</TableCell>
                         <TableCell className="text-stone-500 text-sm">{c.mediaRes?.codigo || '-'}</TableCell>
                         <TableCell className="text-stone-500 text-sm">{c.mediaRes?.romaneo?.tropaCodigo || '-'}</TableCell>
                         <TableCell>{c.camara?.nombre || '-'}</TableCell>

@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Calcular peso total de entrada
-    const pesoEntrada = cuartos.reduce((sum, c) => sum + c.peso, 0)
+    const pesoEntrada = cuartos.reduce((sum, c) => sum + (c.peso || 0), 0)
 
     // Agrupar cuartos por mediaResId para crear un ingreso por cada media res
     // o crear un ingreso único si vienen de diferentes medias
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     for (const [mediaResId, cuartosGrupo] of Object.entries(cuartosByMediaRes)) {
       const primerCuarto = cuartosGrupo[0]
-      const pesoGrupo = cuartosGrupo.reduce((sum, c) => sum + c.peso, 0)
+      const pesoGrupo = cuartosGrupo.reduce((sum, c) => sum + (c.peso || 0), 0)
 
       // Determinar tipo de media según los cuartos
       const tieneDelantero = cuartosGrupo.some(c => c.tipo === 'DELANTERO' || c.tipoCuarto?.codigo?.toUpperCase().includes('DEL'))

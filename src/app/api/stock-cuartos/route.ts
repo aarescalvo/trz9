@@ -63,16 +63,16 @@ export async function GET(request: NextRequest) {
       enCamara: cuartos.filter(c => c.estado === 'EN_CAMARA').length,
       enDespostada: cuartos.filter(c => c.estado === 'EN_DESPOSTADA').length,
       despostados: cuartos.filter(c => c.estado === 'EN_DESPOSTADA').length,
-      pesoTotal: cuartos.reduce((acc, c) => acc + c.peso, 0),
+      pesoTotal: cuartos.reduce((acc, c) => acc + (c.peso || 0), 0),
       porSigla: {
         A: cuartos.filter(c => c.sigla === 'A').length,
         D: cuartos.filter(c => c.sigla === 'D').length,
         T: cuartos.filter(c => c.sigla === 'T').length
       },
       pesoPorSigla: {
-        A: cuartos.filter(c => c.sigla === 'A').reduce((acc, c) => acc + c.peso, 0),
-        D: cuartos.filter(c => c.sigla === 'D').reduce((acc, c) => acc + c.peso, 0),
-        T: cuartos.filter(c => c.sigla === 'T').reduce((acc, c) => acc + c.peso, 0)
+        A: cuartos.filter(c => c.sigla === 'A').reduce((acc, c) => acc + (c.peso || 0), 0),
+        D: cuartos.filter(c => c.sigla === 'D').reduce((acc, c) => acc + (c.peso || 0), 0),
+        T: cuartos.filter(c => c.sigla === 'T').reduce((acc, c) => acc + (c.peso || 0), 0)
       },
       alertasVencimiento: [] as { tipo: string; tropaCodigo: string; dias: number }[]
     }
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
         acc[camaraNombre] = { cantidad: 0, peso: 0 }
       }
       acc[camaraNombre].cantidad++
-      acc[camaraNombre].peso += c.peso
+      acc[camaraNombre].peso += (c.peso || 0)
       return acc
     }, {})
 
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
         acc[tropa] = { cantidad: 0, peso: 0, propietario: c.propietario?.nombre || c.mediaRes.usuarioFaena?.nombre }
       }
       acc[tropa].cantidad++
-      acc[tropa].peso += c.peso
+      acc[tropa].peso += (c.peso || 0)
       return acc
     }, {})
 

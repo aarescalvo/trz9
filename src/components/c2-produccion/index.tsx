@@ -123,7 +123,7 @@ export default function C2ProduccionModule({ operador }: { operador: Operador })
 
   // Calcular control de masa
   useEffect(() => {
-    const entrada = cuartos.reduce((sum, c) => sum + c.peso, 0)
+    const entrada = cuartos.reduce((sum, c) => sum + (c.peso || 0), 0)
     const salida = cajas.reduce((sum, c) => sum + c.pesoNeto, 0)
     setPesoEntradaTotal(entrada)
     setPesoSalidaTotal(salida)
@@ -423,7 +423,7 @@ export default function C2ProduccionModule({ operador }: { operador: Operador })
                           {cuartoSeleccionado.tipoCuarto?.nombre || cuartoSeleccionado.tipo}
                         </Badge>
                         <p className="font-medium text-stone-800">{cuartoSeleccionado.codigo}</p>
-                        <p className="text-sm text-stone-500">{cuartoSeleccionado.peso.toFixed(1)} kg</p>
+                        <p className="text-sm text-stone-500">{(cuartoSeleccionado.peso ?? 0).toFixed(1)} kg</p>
                         {cuartoSeleccionado.mediaRes?.romaneo?.tropaCodigo && (
                           <p className="text-xs text-stone-400">Tropa: {cuartoSeleccionado.mediaRes.romaneo.tropaCodigo}</p>
                         )}
@@ -453,7 +453,7 @@ export default function C2ProduccionModule({ operador }: { operador: Operador })
                             </Badge>
                             <p className="text-sm font-medium">{c.codigo}</p>
                           </div>
-                          <span className="font-semibold text-amber-600">{c.peso.toFixed(1)} kg</span>
+                          <span className="font-semibold text-amber-600">{(c.peso ?? 0).toFixed(1)} kg</span>
                         </div>
                       ))
                     )}
