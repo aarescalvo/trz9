@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar si ya existe una caja con el mismo numero
-    const existente = await db.cajaEmpaque.findUnique({
+    const existente = await db.cajaEmpaque.findFirst({
       where: { numero: data.numero }
     })
     if (existente) {
