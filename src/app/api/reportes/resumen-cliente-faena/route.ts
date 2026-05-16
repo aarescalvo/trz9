@@ -92,8 +92,7 @@ export async function GET(request: NextRequest) {
         where: mediasWhere,
         select: {
           estado: true,
-          peso: true,
-          facturado: true
+          peso: true
         }
       })
 
@@ -101,10 +100,8 @@ export async function GET(request: NextRequest) {
       entry.kgDespachados = medias
         .filter(m => m.estado === 'DESPACHADO')
         .reduce((sum, m) => sum + m.peso, 0)
-      entry.mediasFacturadas = medias.filter(m => m.facturado).length
-      entry.kgFacturados = medias
-        .filter(m => m.facturado)
-        .reduce((sum, m) => sum + m.peso, 0)
+      entry.mediasFacturadas = 0
+      entry.kgFacturados = 0
       entry.mediasEnCamara = medias.filter(m => m.estado === 'EN_CAMARA').length
     }
 
@@ -159,7 +156,7 @@ export async function GET(request: NextRequest) {
         cliente: {
           select: { id: true, nombre: true }
         },
-        pagos: true
+        pagosFactura: true
       },
       orderBy: { fecha: 'desc' }
     })
@@ -187,9 +184,9 @@ export async function GET(request: NextRequest) {
       entry.totalFacturado += f.total
       const totalPagos = f.pagosFactura.reduce((sum, p) => sum + p.monto, 0)
       entry.totalCobrado += totalPagos
-      entry.saldoPendiente += f.saldo
+      entry.saldoPendiente += (f.total - f.pagosFactura.reduce((s, p) => s + p.monto, 0))
 
-      if (f.estado === 'PENDIENTE' || f.estado === 'EMITIDA' || f.estado === 'BORRADOR') {
+      if (f.estado === 'PENDIENTE' || f.estado === 'EMITIDA') {
         entry.facturasPendientes++
       } else if (f.estado === 'PAGADA') {
         entry.facturasPagadas++
@@ -202,7 +199,7 @@ export async function GET(request: NextRequest) {
         numero: f.numero,
         fecha: f.fecha,
         total: f.total,
-        saldo: f.saldo,
+        saldo: f.total - f.pagosFactura.reduce((s, p) => s + p.monto, 0),
         estado: f.estado,
         tipoComprobante: f.tipoComprobante
       })

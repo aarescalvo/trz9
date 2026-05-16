@@ -53,8 +53,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         cliente: { select: { id: true, nombre: true } },
-        pagos: true,
-        notas: { where: { estado: 'EMITIDA' } },
+        pagosFactura: true,
       },
       orderBy: { fecha: 'asc' }
     })
@@ -62,8 +61,7 @@ export async function GET(request: NextRequest) {
     // Calcular montos pagados y saldos
     const facturasConMontos = facturas.map(f => {
       const totalPagado = f.pagosFactura.reduce((sum, p) => sum + p.monto, 0)
-      const totalNotasCredito = f.notas.filter(n => n.tipo === 'CREDITO').reduce((sum, n) => sum + n.total, 0)
-      const saldoPendiente = Math.max(0, f.total - totalPagado - totalNotasCredito)
+      const saldoPendiente = Math.max(0, f.total - totalPagado)
       return { ...f, totalPagado, saldoPendiente }
     })
 

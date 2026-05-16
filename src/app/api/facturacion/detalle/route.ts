@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
               cliente: true
             }
           },
-          tipoServicio: true
+          tiposServicio: true
         }
       })
 
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
             }
           }
         },
-        tipoServicio: true
+        tiposServicio: true
       },
       orderBy: {
         createdAt: 'desc'
@@ -107,7 +107,6 @@ export async function POST(request: NextRequest) {
     const detalle = await db.detalleFactura.create({
       data: {
         facturaId,
-        tipoServicioId: tipoServicioId || null,
         tipoProducto: 'OTRO',
         descripcion: descripcion || '',
         cantidad: cantidad || 1,

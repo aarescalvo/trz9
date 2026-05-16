@@ -211,7 +211,6 @@ export async function POST(request: NextRequest) {
         subtotal,
         iva,
         total,
-        saldoPendiente: total,
         estado: 'PENDIENTE',
         condicionVenta: condicionVenta || 'CONTADO',
         observaciones,

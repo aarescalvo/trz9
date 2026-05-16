@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
         HUESO: movimientos.filter(m => m.tipo === 'HUESO').length,
         GRASA: movimientos.filter(m => m.tipo === 'GRASA').length,
         MERMA: movimientos.filter(m => m.tipo === 'MERMA').length,
-        DESECHO: movimientos.filter(m => m.tipo === 'DESECHO').length
+        DESPERICIO: movimientos.filter(m => m.tipo === 'DESPERICIO').length
       },
       porDestino: {
         PRODUCCION: movimientos.filter(m => m.destino === 'PRODUCCION').length,
@@ -80,7 +80,6 @@ export async function POST(request: NextRequest) {
       loteId,
       tipo,
       productoId,
-      productoNombre,
       pesoBruto,
       pesoNeto,
       pesoDesperdicio,
@@ -98,19 +97,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!productoNombre) {
-      return NextResponse.json(
-        { success: false, error: 'El nombre del producto es requerido' },
-        { status: 400 }
-      )
-    }
-
     const movimiento = await db.movimientoDespostada.create({
       data: {
         loteId: loteId || null,
         tipo,
         productoId: productoId || null,
-        productoNombre,
         pesoBruto: pesoBruto || 0,
         pesoNeto: pesoNeto || 0,
         pesoDesperdicio: pesoDesperdicio || 0,

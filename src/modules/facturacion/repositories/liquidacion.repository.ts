@@ -9,7 +9,7 @@ export class LiquidacionRepository {
         estado: 'FAENADO',
         fechaFaena: { not: null },
         kgGancho: { not: null },
-        liquidacion: null,
+        liquidacionesFaena: { none: {} },
       },
       include: {
         usuarioFaena: { select: { id: true, nombre: true, cuit: true, condicionIva: true, razonSocial: true } },

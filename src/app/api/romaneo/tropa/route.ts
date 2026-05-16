@@ -77,7 +77,6 @@ export async function GET(request: NextRequest) {
             cantidadCabezas: tropa.cantidadCabezas,
             usuarioFaena: tropa.usuarioFaena,
             kgGancho: tropa.kgGancho,
-            rinde: tropa.rinde,
             fechaFaena: tropa.fechaFaena
           },
           garrones,

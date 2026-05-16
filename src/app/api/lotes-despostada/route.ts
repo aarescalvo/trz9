@@ -24,7 +24,6 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             tipo: true,
-            productoNombre: true,
             pesoNeto: true,
             pesoBruto: true
           }
@@ -94,6 +93,7 @@ export async function POST(request: NextRequest) {
     const lote = await db.loteDespostada.create({
       data: {
         numero,
+        anio: new Date().getFullYear(),
         estado: 'ABIERTO',
         observaciones: observaciones || null,
         operadorId: operadorId || null

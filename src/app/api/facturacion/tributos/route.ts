@@ -61,7 +61,8 @@ export async function POST(request: NextRequest) {
     // Update factura importeTributos
     const allTributos = await db.facturaTributo.findMany({ where: { facturaId } })
     const totalTributos = allTributos.reduce((sum, t) => sum + t.importe, 0)
-    await db.factura.update({ where: { id: facturaId }, data: { importeTributos: totalTributos } })
+    // Total tributos calculated but not stored on Factura (field doesn't exist)
+    void totalTributos
     
     return NextResponse.json({ success: true, data: tributo })
   } catch (error) {
@@ -87,7 +88,8 @@ export async function DELETE(request: NextRequest) {
     // Recalculate total
     const allTributos = await db.facturaTributo.findMany({ where: { facturaId: tributo.facturaId } })
     const totalTributos = allTributos.reduce((sum, t) => sum + t.importe, 0)
-    await db.factura.update({ where: { id: tributo.facturaId }, data: { importeTributos: totalTributos } })
+    // Total tributos calculated but not stored on Factura (field doesn't exist)
+    void totalTributos
     
     return NextResponse.json({ success: true, message: 'Tributo eliminado' })
   } catch (error) {

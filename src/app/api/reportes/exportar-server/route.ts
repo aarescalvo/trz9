@@ -398,7 +398,7 @@ async function fetchCuentasCorrientesData(filters: ExportRequestBody['filters'])
     where: whereFacturas,
     include: {
       cliente: { select: { id: true, nombre: true, cuit: true } },
-      pagos: {
+      pagosFactura: {
         select: { id: true, fecha: true, monto: true, metodoPago: true },
         orderBy: { fecha: 'desc' },
       },
@@ -424,7 +424,7 @@ async function fetchCuentasCorrientesData(filters: ExportRequestBody['filters'])
     }
     const entry = clientesMap.get(cid)!
     entry.totalFacturado += f.total
-    entry.saldo += f.saldo
+    entry.saldo += (f.total - f.pagosFactura.reduce((sum: number, p: any) => sum + p.monto, 0))
     entry.cantidadFacturas++
     const pagosFactura = f.pagosFactura.reduce((sum: number, p: any) => sum + p.monto, 0)
     entry.totalPagado += pagosFactura

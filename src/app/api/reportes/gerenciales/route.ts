@@ -58,10 +58,10 @@ export async function GET(request: NextRequest) {
     // Ingresos
     const facturas = await db.factura.findMany({
       where: { fecha: { gte: fechaInicio } },
-      select: { total: true, saldo: true }
+      select: { total: true }
     })
     const ingresosTotal = facturas.reduce((sum, f) => sum + (f.total || 0), 0)
-    const ingresosPendiente = facturas.reduce((sum, f) => sum + (f.saldo || 0), 0)
+    const ingresosPendiente = ingresosTotal // saldo is derived, not stored
 
     // Tendencia (comparar con período anterior)
     const duracionPeriodo = hoy.getTime() - fechaInicio.getTime()

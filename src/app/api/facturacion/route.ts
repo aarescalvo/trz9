@@ -94,11 +94,11 @@ export async function GET(request: NextRequest) {
           },
           detalles: {
             include: {
-              tipoServicio: true
+              tiposServicio: true
             },
             orderBy: { createdAt: 'asc' }
           },
-          pagos: {
+          pagosFactura: {
             orderBy: { fecha: 'desc' }
           },
           operador: {
@@ -106,19 +106,6 @@ export async function GET(request: NextRequest) {
               id: true,
               nombre: true
             }
-          },
-          notas: {
-            where: { estado: 'EMITIDA' },
-            select: {
-              id: true,
-              tipo: true,
-              numero: true,
-              puntoVenta: true,
-              total: true,
-              estado: true,
-              motivo: true,
-            },
-            orderBy: { createdAt: 'desc' }
           },
           tributos: true
         },
@@ -301,7 +288,6 @@ export async function POST(request: NextRequest) {
           numeroInterno,
           tipoComprobante,
           clienteId,
-          clienteNombre: cliente.razonSocial || cliente.nombre,
           clienteCuit: cliente.cuit,
           clienteCondicionIva: cliente.condicionIva as CondicionIva,
           clienteDireccion: cliente.direccion,
@@ -310,7 +296,6 @@ export async function POST(request: NextRequest) {
           iva,
           porcentajeIva: porcentajeIvaCalculado,
           total: totalFinal,
-          saldo: totalFinal,  // Inicialmente el saldo es el total
           estado: 'PENDIENTE',
           observaciones: observaciones || null,
           condicionVenta: condicionVenta || 'CUENTA_CORRIENTE',
@@ -338,7 +323,7 @@ export async function POST(request: NextRequest) {
           cliente: true,
           detalles: {
             include: {
-              tipoServicio: true
+              tiposServicio: true
             }
           },
           operador: true
@@ -392,7 +377,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, estado, observaciones, remito, fechaVencimiento } = body
+    const { id, estado, observaciones, remito, caeVencimiento } = body
     
     if (!id) {
       return NextResponse.json(
@@ -429,7 +414,7 @@ export async function PUT(request: NextRequest) {
         estado,
         observaciones,
         remito,
-        fechaVencimiento: fechaVencimiento ? new Date(fechaVencimiento) : undefined
+        caeVencimiento: caeVencimiento ? new Date(caeVencimiento) : undefined
       },
       include: {
         cliente: true,
@@ -490,8 +475,7 @@ export async function DELETE(request: NextRequest) {
     const factura = await db.factura.update({
       where: { id },
       data: {
-        estado: 'ANULADA',
-        saldo: 0
+        estado: 'ANULADA'
       }
     })
     

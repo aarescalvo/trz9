@@ -13,9 +13,9 @@ type ListaFaenaRow = {
   asignaciones?: Array<{ tropaCodigo?: string; romaneoRef?: string }>;
 };
 
-type MediaResRow = { estado: string; facturado: boolean; peso?: number };
+type MediaResRow = { estado: string; peso?: number };
 type RomaneoRow = { mediasRes?: MediaResRow[] };
-type FacturaRow = { id: string; numero?: string; estado: string; total: number; saldo: number; fecha: Date };
+type FacturaRow = { id: string; numero?: string; estado: string; total: number; fecha: Date; pagosFactura?: Array<{ monto: number }> };
 
 export async function GET(request: NextRequest) {
   const authError = await checkPermission(request, 'puedeReportes')
@@ -105,15 +105,13 @@ export async function GET(request: NextRequest) {
         const totalMedias = allMedias.length
         const mediasDespachadas = allMedias.filter(m => m.estado === 'DESPACHADO').length
         const mediasEnCamara = allMedias.filter(m => m.estado === 'EN_CAMARA').length
-        const mediasFacturadas = allMedias.filter(m => m.facturado).length
+        const mediasFacturadas = 0
 
         const totalKgFaenados = allMedias.reduce((sum, m) => sum + (m.peso || 0), 0)
         const totalKgDespachados = allMedias
           .filter(m => m.estado === 'DESPACHADO')
           .reduce((sum, m) => sum + (m.peso || 0), 0)
-        const totalKgFacturados = allMedias
-          .filter(m => m.facturado)
-          .reduce((sum, m) => sum + (m.peso || 0), 0)
+        const totalKgFacturados = 0
 
         // Find facturas related to this tropa
         const facturasFromDetalles = await db.factura.findMany({
@@ -125,7 +123,7 @@ export async function GET(request: NextRequest) {
             }
           },
           include: {
-            pagos: true
+            pagosFactura: true
           }
         })
 
@@ -138,7 +136,7 @@ export async function GET(request: NextRequest) {
             }
           },
           include: {
-            pagos: true
+            pagosFactura: true
           }
         })
 
@@ -179,7 +177,7 @@ export async function GET(request: NextRequest) {
             numero: f.numero,
             estado: f.estado,
             total: f.total,
-            saldo: f.saldo,
+            saldo: f.total - (f.pagosFactura || []).reduce((s: number, p: any) => s + p.monto, 0),
             fecha: f.fecha
           }))
         })

@@ -77,8 +77,7 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               estado: true,
-              peso: true,
-              facturado: true
+              peso: true
             }
           }
         }
@@ -103,7 +102,7 @@ export async function GET(request: NextRequest) {
           }
         },
         include: {
-          pagos: true,
+          pagosFactura: true,
           detalles: {
             where: { tropaCodigo: tropa.codigo }
           }
@@ -137,7 +136,7 @@ export async function GET(request: NextRequest) {
           numero: f.numero,
           fecha: f.fecha,
           total: f.total,
-          saldo: f.saldo,
+          saldo: f.total - f.pagosFactura.reduce((s, p) => s + p.monto, 0),
           estado: f.estado,
           tipoComprobante: f.tipoComprobante,
           montoDetallesTropa: f.detalles.reduce((sum, d) => sum + d.subtotal, 0)
@@ -195,7 +194,7 @@ export async function GET(request: NextRequest) {
           numero: f.numero,
           fecha: f.fecha,
           total: f.total,
-          saldo: f.saldo,
+          saldo: f.total - f.pagosFactura.reduce((s, p) => s + p.monto, 0),
           estado: f.estado,
           tipoComprobante: f.tipoComprobante,
           detalles: f.detalles.map(d => ({

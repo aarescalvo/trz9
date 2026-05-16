@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const where: any = {}
     if (loteId) where.loteId = loteId
     // Solo mostrar movimientos de tipo merma (no CORTE)
-    where.tipo = { in: ['HUESO', 'GRASA', 'MERMA', 'DESECHO'] }
+    where.tipo = { in: ['HUESO', 'GRASA', 'MERMA', 'DESPERICIO'] }
     if (tipo) where.tipo = tipo
     if (fechaDesde || fechaHasta) {
       where.fecha = {}
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
         hueso: mermas.filter(m => m.tipo === 'HUESO').reduce((acc, m) => acc + (m.pesoDesperdicio || 0), 0),
         grasa: mermas.filter(m => m.tipo === 'GRASA').reduce((acc, m) => acc + (m.pesoDesperdicio || 0), 0),
         merma: mermas.filter(m => m.tipo === 'MERMA').reduce((acc, m) => acc + (m.pesoDesperdicio || 0), 0),
-        desecho: mermas.filter(m => m.tipo === 'DESECHO').reduce((acc, m) => acc + (m.pesoDesperdicio || 0), 0),
+        desperdicio: mermas.filter(m => m.tipo === 'DESPERICIO').reduce((acc, m) => acc + (m.pesoDesperdicio || 0), 0),
       }
     }
 
@@ -101,7 +101,6 @@ export async function POST(request: NextRequest) {
       data: {
         loteId,
         tipo,
-        productoNombre: productoNombre || 'Merma',
         pesoDesperdicio: pesoKg,
         observaciones,
         operadorId

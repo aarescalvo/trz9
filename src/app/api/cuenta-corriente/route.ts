@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       (sum, f) => sum + f.pagosFactura.reduce((s, p) => s + p.monto, 0),
       0
     )
-    const saldoPendiente = facturas.reduce((sum, f) => sum + f.saldo, 0)
+    const saldoPendiente = facturas.reduce((sum, f) => sum + (f.total - f.pagosFactura.reduce((s, p) => s + p.monto, 0)), 0)
     const facturasVencidas = facturas.filter(f => {
       if (f.estado === 'PAGADA') return false
       const dias = Math.floor(
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       for (const imp of imputaciones) {
         const factura = await db.factura.findUnique({
           where: { id: imp.facturaId },
-          include: { pagos: true },
+          include: { pagosFactura: true },
         })
 
         if (!factura) {
@@ -139,7 +139,8 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        const montoImputar = Math.min(Number(imp.monto), factura.saldo)
+        const saldoActual = factura.total - factura.pagosFactura.reduce((s, p) => s + p.monto, 0)
+        const montoImputar = Math.min(Number(imp.monto), saldoActual)
         if (montoImputar <= 0) {
           resultados.push({ facturaId: imp.facturaId, error: 'Monto inválido' })
           continue
@@ -159,14 +160,13 @@ export async function POST(request: NextRequest) {
           },
         })
 
-        // Actualizar saldo y estado de la factura
-        const nuevoSaldo = factura.saldo - montoImputar
+        // Actualizar estado de la factura
+        const nuevoSaldo = saldoActual - montoImputar
         const nuevoEstado = nuevoSaldo <= 0 ? 'PAGADA' : 'EMITIDA'
 
         await db.factura.update({
           where: { id: factura.id },
           data: {
-            saldo: Math.max(0, nuevoSaldo),
             estado: nuevoEstado,
           },
         })
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
 
     const factura = await db.factura.findUnique({
       where: { id: facturaId },
-      include: { pagos: true },
+      include: { pagosFactura: true },
     })
 
     if (!factura) {
@@ -228,7 +228,8 @@ export async function POST(request: NextRequest) {
     }
 
     // No permitir pagar más del saldo
-    const montoPago = Math.min(Number(monto), factura.saldo)
+    const saldoActual = factura.total - factura.pagosFactura.reduce((s, p) => s + p.monto, 0)
+    const montoPago = Math.min(Number(monto), saldoActual)
 
     // Crear el pago
     const pago = await db.pagoFactura.create({
@@ -244,14 +245,13 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Actualizar saldo y estado
-    const nuevoSaldo = factura.saldo - montoPago
+    // Actualizar estado
+    const nuevoSaldo = saldoActual - montoPago
     const nuevoEstado = nuevoSaldo <= 0 ? 'PAGADA' : 'EMITIDA'
 
     await db.factura.update({
       where: { id: facturaId },
       data: {
-        saldo: Math.max(0, nuevoSaldo),
         estado: nuevoEstado,
       },
     })

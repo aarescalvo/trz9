@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       where: whereFacturas,
       include: {
         cliente: { select: { id: true, nombre: true, cuit: true } },
-        pagos: {
+        pagosFactura: {
           select: { id: true, fecha: true, monto: true, metodoPago: true },
           orderBy: { fecha: 'desc' },
         },
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
 
       const entry = clientesMap.get(cid)!
       entry.totalFacturado += f.total
-      entry.saldo += f.saldo
+      entry.saldo += (f.total - f.pagosFactura.reduce((s, p) => s + p.monto, 0))
       entry.cantidadFacturas++
 
       // Calcular pagos de esta factura
