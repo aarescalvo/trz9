@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         },
         detalles: {
           include: {
-            tipoServicio: true,
+            tiposServicio: true,
           },
         },
       },
