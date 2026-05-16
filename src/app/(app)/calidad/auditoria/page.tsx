@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useOperador } from '@/components/providers/auth-provider'
 import { EditableScreenWrapper } from '@/components/ui/editable-screen'
 import { AuditoriaOperadorModule } from '@/modules-pending/auditoria-operador'
