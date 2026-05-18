@@ -16,7 +16,6 @@ const getAllowedOrigins = (): string[] => {
 
 // Version: 3.18.0 - Security hardening + quality improvements
 const nextConfig: NextConfig = {
-  output: 'standalone',
   typescript: {
     ignoreBuildErrors: false,
   },
@@ -29,13 +28,14 @@ const nextConfig: NextConfig = {
     },
   },
   // Fix Windows case-insensitive path causing duplicate React instances
-  // (e.g. C:\TrazaAlan vs C:\Trazaalan produce different webpack cache keys)
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      'react': path.resolve(process.cwd(), 'node_modules/react'),
-      'react-dom': path.resolve(process.cwd(), 'node_modules/react-dom'),
-    };
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'react': path.resolve(process.cwd(), 'node_modules/react'),
+        'react-dom': path.resolve(process.cwd(), 'node_modules/react-dom'),
+      };
+    }
     return config;
   },
 };

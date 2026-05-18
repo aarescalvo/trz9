@@ -1,3 +1,5 @@
+'use client'
+
 // Hook para manejo de estado offline/online
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
