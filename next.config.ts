@@ -28,14 +28,22 @@ const nextConfig: NextConfig = {
     },
   },
   // Fix Windows case-insensitive path causing duplicate React instances
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'react': path.resolve(process.cwd(), 'node_modules/react'),
-        'react-dom': path.resolve(process.cwd(), 'node_modules/react-dom'),
-      };
-    }
+  webpack: (config) => {
+    // Force single React instance across all bundles (client + server)
+    const reactPath = path.resolve(process.cwd(), 'node_modules/react');
+    const reactDomPath = path.resolve(process.cwd(), 'node_modules/react-dom');
+    const schedulerPath = path.resolve(process.cwd(), 'node_modules/scheduler');
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'react': reactPath,
+      'react-dom/client': path.join(reactDomPath, 'client.js'),
+      'react-dom/server': path.join(reactDomPath, 'server.js'),
+      'react-dom/server.browser': path.join(reactDomPath, 'server.browser.js'),
+      'react-dom': reactDomPath,
+      'scheduler': schedulerPath,
+    };
+    // Prevent symlink resolution issues on Windows
+    config.resolve.symlinks = false;
     return config;
   },
 };
