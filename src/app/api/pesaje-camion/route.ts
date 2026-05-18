@@ -9,26 +9,33 @@ import { checkPermission, getOperadorId } from '@/lib/auth-helpers'
 import { createLogger } from '@/lib/logger'
 import { auditCreate, auditUpdate, extractAuditInfo } from '@/lib/audit-middleware'
 const log = createLogger('app.api.pesaje-camion.route')
-async function generarCodigoTropa(especie: Especie): Promise<{ codigo: string; numero: number }> {
+async function generarCodigoTropa(especie: Especie): Promise<{ codigo: string; codigoSimplificado: string; numero: number }> {
   const year = new Date().getFullYear()
   const letra = especie === 'BOVINO' ? 'B' : especie === 'EQUINO' ? 'E' : 'O'
-  
-  const tropas = await db.tropa.findMany({
-    where: {
-      codigo: {
-        startsWith: `${letra} ${year}`
-      }
-    },
-    orderBy: { numero: 'desc' }
+  const numeradorNombre = especie === 'BOVINO' ? 'TROPA_BOVINO' : especie === 'EQUINO' ? 'TROPA_EQUINO' : 'TROPA_OTRO'
+
+  // Usar Numerador con atomic increment para evitar race conditions
+  const numerador = await db.numerador.upsert({
+    where: { nombre: numeradorNombre },
+    update: { ultimoNumero: { increment: 1 }, anio: year },
+    create: { nombre: numeradorNombre, ultimoNumero: 1, anio: year },
   })
-  
-  const nextNumero = tropas.length > 0 ? (tropas[0].numero || 0) + 1 : 1
-  const secuencial = String(nextNumero).padStart(4, '0')
-  
-  return {
-    codigo: `${letra} ${year} ${secuencial}`,
-    numero: nextNumero
+
+  // Si cambió el año, resetear el contador
+  let numero = numerador.ultimoNumero
+  if (numerador.anio !== year) {
+    numero = 1
+    await db.numerador.update({
+      where: { nombre: numeradorNombre },
+      data: { ultimoNumero: 1, anio: year },
+    })
   }
+
+  const secuencial = String(numero).padStart(4, '0')
+  const codigo = `${letra} ${year} ${secuencial}`
+  const codigoSimplificado = `${letra}${secuencial}`
+
+  return { codigo, codigoSimplificado, numero }
 }
 
 // GET - Fetch pesajes or next tropa code
@@ -42,10 +49,10 @@ export async function GET(request: NextRequest) {
   // Get next tropa code preview
   if (action === 'nextTropaCode') {
     const especie = (searchParams.get('especie') || 'BOVINO') as Especie
-    const { codigo, numero } = await generarCodigoTropa(especie)
+    const { codigo, codigoSimplificado, numero } = await generarCodigoTropa(especie)
     return NextResponse.json({
       success: true,
-      data: { codigo, numero }
+      data: { codigo, codigoSimplificado, numero }
     })
   }
   
@@ -323,12 +330,13 @@ export async function POST(request: NextRequest) {
       }
       
       const especieEnum = (especie || 'BOVINO') as Especie
-      const { codigo, numero } = await generarCodigoTropa(especieEnum)
+      const { codigo, codigoSimplificado, numero } = await generarCodigoTropa(especieEnum)
       
       // Preparar datos de tropa
       const tropaData: any = {
         numero,
         codigo,
+        codigoSimplificado,
         usuarioFaenaId,
         especie: especieEnum,
         cantidadCabezas: parseInt(cantidadCabezas) || 0,

@@ -4072,7 +4072,7 @@
   },
   {
     "numero": 178,
-    "codigo": "T178",
+    "codigo": "B 2026 0178",
     "especie": "BOVINO",
     "cantidadCabezas": 20,
     "productorNombre": "SARASOLA ESMIR ANTONIO",
@@ -4095,7 +4095,7 @@
   },
   {
     "numero": 179,
-    "codigo": "T179",
+    "codigo": "B 2026 0179",
     "especie": "BOVINO",
     "cantidadCabezas": 5,
     "productorNombre": "VINCENTY PEDRO JORGE",

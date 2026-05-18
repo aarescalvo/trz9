@@ -34,8 +34,9 @@ const nextConfig: NextConfig = {
     },
   },
   // Fix Windows case-insensitive path causing duplicate React instances
-  // Don't bundle react/react-dom for server - let Node.js resolve them at runtime
-  serverExternalPackages: ['react', 'react-dom'],
+  // Use webpack aliases with canonical paths (realpathSync) to force single React instance
+  // DO NOT use serverExternalPackages for react/react-dom - it breaks React 19's
+  // conditional exports (react-server vs default) causing null useContext at runtime
   webpack: (config) => {
     // Force single React instance using canonical (real) paths
     const reactPath = getRealPath(path.resolve(process.cwd(), 'node_modules/react'));

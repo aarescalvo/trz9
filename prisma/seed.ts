@@ -880,9 +880,11 @@ async function main() {
     // ═══ PASO 12: Numeradores ═══
     logHeader('1️⃣2️⃣ Numeradores')
     try {
+      // Calcular último número de tropa bovino desde los datos del seed
+      const lastTropaBovino = tropaIdMap.size
       await prisma.numerador.createMany({
         data: [
-          { nombre: 'TROPA_BOVINO', ultimoNumero: 200, anio: 2026 },
+          { nombre: 'TROPA_BOVINO', ultimoNumero: lastTropaBovino, anio: 2026 },
           { nombre: 'TROPA_EQUINO', ultimoNumero: 0, anio: 2026 },
           { nombre: 'FACTURA', ultimoNumero: 172, anio: 2026 },
           { nombre: 'TICKET', ultimoNumero: 0, anio: 2026 },
@@ -892,6 +894,7 @@ async function main() {
         ],
       })
       logOk('Numeradores creados', 7)
+      logOk('TROPA_BOVINO numerador', lastTropaBovino)
     } catch (e) {
       logErr('Error creando numeradores', e)
     }
