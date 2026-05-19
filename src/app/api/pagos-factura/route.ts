@@ -225,7 +225,8 @@ export async function DELETE(request: NextRequest) {
 }
 
 // Función auxiliar para obtener resumen de cuenta corriente
-export async function obtenerCuentaCorriente(clienteId: string) {
+// NOT exported — Next.js route handlers only allow HTTP method exports (GET/POST/PUT/DELETE/PATCH)
+async function obtenerCuentaCorriente(clienteId: string) {
   const facturas = await db.factura.findMany({
     where: {
       clienteId,
