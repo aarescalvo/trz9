@@ -35,14 +35,24 @@ export async function validarPermiso(operadorId: string | null | undefined, perm
     select: { rol: true, activo: true, [permiso]: true }
   }) as OperadorPermCheck | null
 
-  if (!operador) return false
-  if (!operador.activo) return false
+  if (!operador) {
+    logger.warn('validarPermiso: operador no encontrado en DB', { operadorId, permiso })
+    return false
+  }
+  if (!operador.activo) {
+    logger.warn('validarPermiso: operador inactivo', { operadorId, permiso, activo: operador.activo })
+    return false
+  }
 
   // ADMINISTRADOR tiene todos los permisos
   if (operador.rol === 'ADMINISTRADOR') return true
 
   // Verificar el permiso específico
-  return operador[permiso] === true
+  const hasSpecific = operador[permiso] === true
+  if (!hasSpecific) {
+    logger.warn('validarPermiso: permiso específico denegado', { operadorId, permiso, rol: operador.rol, valor: operador[permiso] })
+  }
+  return hasSpecific
 }
 
 /**
