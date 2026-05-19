@@ -31,31 +31,35 @@ const nextConfig: NextConfig = {
   // Sin esto, los componentes del servidor obtienen null al llamar useContext()
   webpack: (config, { isServer }) => {
     if (isServer) {
-      // Convertir config.externals a función para filtrar react
-      const originalExternals = config.externals;
-      if (typeof originalExternals === 'string' || Array.isArray(originalExternals)) {
-        config.externals = (ctx, cb) => {
-          (Array.isArray(originalExternals) ? originalExternals : [originalExternals]).forEach(ext => {
-            if (typeof ext === 'string' && !['react', 'react-dom', 'scheduler'].includes(ext)) {
-              ctx.addExternal(ext);
-            }
-          });
-          cb();
-        };
-      } else if (typeof originalExternals === 'function') {
-        config.externals = (ctx, cb, done) => {
-          originalExternals(ctx, (err, externals) => {
-            if (err) { cb(err); return; }
-            const filtered = Array.isArray(externals)
-              ? externals.filter(e => typeof e !== 'string' || !['react', 'react-dom', 'scheduler'].includes(e))
-              : externals;
-            cb(null, filtered);
-          }, done);
-        };
-      } else if (Array.isArray(originalExternals)) {
-        config.externals = originalExternals.filter(
-          e => typeof e !== 'string' || !['react', 'react-dom', 'scheduler'].includes(e)
+      const externalPackages = ['react', 'react-dom', 'scheduler'];
+      if (Array.isArray(config.externals)) {
+        config.externals = config.externals.filter(
+          (e: string | RegExp | Function) => {
+            if (typeof e === 'string') return !externalPackages.includes(e);
+            if (e instanceof RegExp) return !externalPackages.some(p => e.test(p));
+            return true;
+          }
         );
+      } else if (typeof config.externals === 'function') {
+        const originalFn = config.externals;
+        config.externals = (
+          ...args: Parameters<typeof originalFn>
+        ): ReturnType<typeof originalFn> => {
+          const result = originalFn(...args);
+          // Normalize to array and filter
+          if (Array.isArray(result)) {
+            return result.filter(
+              (e: string | RegExp | Function) => {
+                if (typeof e === 'string') return !externalPackages.includes(e);
+                if (e instanceof RegExp) return !externalPackages.some(p => e.test(p));
+                return true;
+              }
+            ) as any;
+          }
+          return result;
+        };
+      } else if (typeof config.externals === 'object' && config.externals !== null) {
+        externalPackages.forEach(pkg => delete (config.externals as Record<string, string>)[pkg]);
       }
     }
     return config;
