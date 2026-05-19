@@ -248,8 +248,8 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-// Función auxiliar para obtener precio vigente
-export async function obtenerPrecioVigente(tipoServicioId: string, clienteId: string, fecha?: Date) {
+// Función auxiliar para obtener precio vigente (not exported — Next.js route handlers only allow HTTP method exports)
+async function obtenerPrecioVigente(tipoServicioId: string, clienteId: string, fecha?: Date) {
   const fechaBusqueda = fecha || new Date()
 
   const precio = await db.precioServicio.findFirst({
