@@ -18,6 +18,8 @@ import {
   EstadoRomaneo,
   EstadoFactura,
   TipoCamara,
+  LadoMedia,
+  SiglaMedia,
 } from '@prisma/client'
 import * as path from 'path'
 import * as fs from 'fs'
@@ -858,6 +860,73 @@ async function main() {
       logOk('Romaneos creados', romaneosCreados)
     } catch (e) {
       logErr('Error creando romaneos', e)
+    }
+
+    // ═══ PASO 9b: Crear Medias Res a partir de Romaneos ═══
+    logHeader('9b️⃣  Crear Medias Res desde Romaneos')
+    try {
+      const romaneos = await prisma.romaneo.findMany({
+        where: { estado: { in: ['PENDIENTE', 'CONFIRMADO'] } },
+        select: {
+          id: true, tropaCodigo: true, numeroAnimal: true,
+          pesoMediaIzq: true, pesoMediaDer: true, garron: true,
+        },
+      })
+
+      const mediasResData: {
+        romaneoId: string; lado: LadoMedia; peso: number;
+        sigla: SiglaMedia; codigo: string; estado: 'EN_CAMARA';
+      }[] = []
+
+      for (const r of romaneos) {
+        // Media izquierda (sigla A = Asado)
+        if (r.pesoMediaIzq && r.pesoMediaIzq > 0) {
+          mediasResData.push({
+            romaneoId: r.id,
+            lado: LadoMedia.IZQUIERDA,
+            peso: r.pesoMediaIzq,
+            sigla: SiglaMedia.A,
+            codigo: `MR-${r.tropaCodigo}-${r.numeroAnimal || r.garron}-IZ`,
+            estado: 'EN_CAMARA',
+          })
+        }
+        // Media derecha (sigla A = Asado)
+        if (r.pesoMediaDer && r.pesoMediaDer > 0) {
+          mediasResData.push({
+            romaneoId: r.id,
+            lado: LadoMedia.DERECHA,
+            peso: r.pesoMediaDer,
+            sigla: SiglaMedia.A,
+            codigo: `MR-${r.tropaCodigo}-${r.numeroAnimal || r.garron}-DER`,
+            estado: 'EN_CAMARA',
+          })
+        }
+      }
+
+      let mediasCreadas = 0
+      const BATCH_SIZE = 500
+      for (let i = 0; i < mediasResData.length; i += BATCH_SIZE) {
+        const batch = mediasResData.slice(i, i + BATCH_SIZE)
+        try {
+          const result = await prisma.mediaRes.createMany({ data: batch, skipDuplicates: true })
+          mediasCreadas += result.count
+        } catch (err: any) {
+          if (err.message?.includes('Unique constraint')) {
+            // Insertar de a uno con skipDuplicates por códigos duplicados
+            for (const mr of batch) {
+              try {
+                await prisma.mediaRes.create({ data: mr })
+                mediasCreadas++
+              } catch { /* skip duplicate */ }
+            }
+          } else {
+            console.warn(`  ⚠️  Batch ${i / BATCH_SIZE}: ${err.message?.substring(0, 80)}`)
+          }
+        }
+      }
+      logOk('Medias Res creadas', mediasCreadas)
+    } catch (e) {
+      logErr('Error creando medias res', e)
     }
 
     // ═══ PASO 10: Facturas (desde JSON) ═══
