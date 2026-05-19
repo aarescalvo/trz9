@@ -780,9 +780,14 @@ export function ListaFaenaModule({ operador }: { operador: Operador }) {
             <EditableBlock bloqueId="historialListas" label="Historial de Listas">
               <Card className="border-0 shadow-md">
                 <CardHeader className="bg-stone-50 rounded-t-lg">
-                  <CardTitle className="text-lg">
-                    <TextoEditable id="label-listas-anteriores" original="Listas de Faena Anteriores" tag="span" />
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">
+                      <TextoEditable id="label-listas-anteriores" original="Listas de Faena Anteriores" tag="span" />
+                    </CardTitle>
+                    <Badge variant="outline" className="text-sm">
+                      {listas.length} {listas.length === 1 ? 'lista' : 'listas'}
+                    </Badge>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   {listas.length === 0 ? (
@@ -791,43 +796,81 @@ export function ListaFaenaModule({ operador }: { operador: Operador }) {
                       <p><TextoEditable id="msg-no-hay-listas" original="No hay listas" tag="span" /></p>
                     </div>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead><TextoEditable id="th-fecha" original="Fecha" tag="span" /></TableHead>
-                          <TableHead><TextoEditable id="th-cantidad2" original="Cantidad" tag="span" /></TableHead>
-                          <TableHead><TextoEditable id="th-estado" original="Estado" tag="span" /></TableHead>
-                          <TableHead><TextoEditable id="th-accion" original="Acción" tag="span" /></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {listas.map((lista) => (
-                          <TableRow key={lista.id} className={lista.id === listaActual?.id ? 'bg-amber-50' : ''}>
-                            <TableCell>
-                              {new Date(lista.fecha).toLocaleDateString('es-AR')}
-                            </TableCell>
-                            <TableCell>{lista.cantidadTotal} <TextoEditable id="label-animales3" original="animales" tag="span" /></TableCell>
-                            <TableCell>{getEstadoBadge(lista.estado)}</TableCell>
-                            <TableCell>
-                              {lista.estado === 'CERRADA' && operador.nivel !== 'OPERADOR' && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => {
-                                    setListaActual(lista)
-                                    setReabrirListaOpen(true)
-                                  }}
-                                  className="text-amber-600"
-                                >
-                                  <Unlock className="w-4 h-4 mr-1" />
-                                  <TextoEditable id="btn-reabrir2" original="Reabrir" tag="span" />
-                                </Button>
-                              )}
-                            </TableCell>
+                    <ScrollArea className="h-[500px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="sticky top-0 bg-stone-50 z-10">
+                            <TableHead className="w-16 text-center"><TextoEditable id="th-numero" original="N°" tag="span" /></TableHead>
+                            <TableHead><TextoEditable id="th-fecha" original="Fecha" tag="span" /></TableHead>
+                            <TableHead className="text-center"><TextoEditable id="th-tropas-count" original="Tropas" tag="span" /></TableHead>
+                            <TableHead className="text-center"><TextoEditable id="th-cantidad2" original="Cantidad" tag="span" /></TableHead>
+                            <TableHead><TextoEditable id="th-estado" original="Estado" tag="span" /></TableHead>
+                            <TableHead className="text-center"><TextoEditable id="th-accion" original="Acción" tag="span" /></TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {listas.map((lista) => (
+                            <TableRow 
+                              key={lista.id} 
+                              className={`cursor-pointer hover:bg-stone-50 transition-colors ${lista.id === listaActual?.id ? 'bg-amber-50' : ''}`}
+                              onClick={() => {
+                                setListaActual(lista)
+                                setActiveTab('actual')
+                              }}
+                            >
+                              <TableCell className="text-center font-mono font-bold text-stone-600">
+                                {String(lista.numero).padStart(4, '0')}
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {new Date(lista.fecha).toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Badge variant="outline" className="text-xs">
+                                  {lista.tropas?.length || 0}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Badge className="bg-stone-800 text-white text-xs font-bold">
+                                  {lista.cantidadTotal}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{getEstadoBadge(lista.estado)}</TableCell>
+                              <TableCell className="text-center">
+                                {lista.estado === 'CERRADA' && operador.nivel !== 'OPERADOR' && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setListaActual(lista)
+                                      setReabrirListaOpen(true)
+                                    }}
+                                    className="text-amber-600 hover:bg-amber-50"
+                                    title="Reabrir esta lista"
+                                  >
+                                    <Unlock className="w-4 h-4 mr-1" />
+                                    <TextoEditable id="btn-reabrir2" original="Reabrir" tag="span" />
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setListaActual(lista)
+                                    setActiveTab('actual')
+                                  }}
+                                  className="text-blue-600 hover:bg-blue-50"
+                                  title="Ver detalle"
+                                >
+                                  <AlertCircle className="w-4 h-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
                   )}
                 </CardContent>
               </Card>
