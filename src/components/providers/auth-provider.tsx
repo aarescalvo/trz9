@@ -181,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.success) {
         // Login siempre fuerza actualización completa
         prevPermisosKey.current = null
+        operadorRef.current = data.data
         setOperador(data.data)
         return { success: true }
       }
