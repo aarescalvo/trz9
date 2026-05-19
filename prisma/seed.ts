@@ -224,7 +224,30 @@ async function main() {
           const obs: string[] = []
           if (t.observaciones) obs.push(t.observaciones)
           if (t.productorNombre && !productor) obs.push(t.productorCuit ? `Productor: ${t.productorNombre} (CUIT: ${t.productorCuit})` : `Productor: ${t.productorNombre}`)
-          const r = await prisma.tropa.upsert({ where: { numero: t.numero }, update: { codigo: t.codigo, productorId: productor?.id ?? null, usuarioFaenaId: uf?.id ?? defaultClienteId, especie, dte: t.dte || `DTE-2026-${String(t.numero).padStart(4, '0')}`, guia: t.guia ? String(t.guia) : `GUIA-2026-${String(t.numero).padStart(4, '0')}`, cantidadCabezas: t.cantidadCabezas, estado: estadoT, pesoBruto: t.pesoVivo ? t.pesoVivo * 1.15 : null, pesoNeto: t.pesoVivo ?? null, observaciones: obs.length > 0 ? obs.join(' | ') : undefined }, create: { numero: t.numero, codigo: t.codigo, productorId: productor?.id ?? null, usuarioFaenaId: uf?.id ?? defaultClienteId, especie, dte: t.dte || `DTE-2026-${String(t.numero).padStart(4, '0')}`, guia: t.guia ? String(t.guia) : `GUIA-2026-${String(t.numero).padStart(4, '0')}`, cantidadCabezas: t.cantidadCabezas, estado: estadoT, pesoBruto: t.pesoVivo ? t.pesoVivo * 1.15 : null, pesoNeto: t.pesoVivo ?? null, observaciones: obs.length > 0 ? obs.join(' | ') : undefined, fechaRecepcion: t.fechaFaena ? new Date(t.fechaFaena) : new Date() } })
+          const tropaData: Record<string, unknown> = {
+            codigo: t.codigo,
+            productorId: productor?.id ?? null,
+            usuarioFaenaId: uf?.id ?? defaultClienteId,
+            especie,
+            dte: t.dte || `DTE-2026-${String(t.numero).padStart(4, '0')}`,
+            guia: t.guia ? String(t.guia) : `GUIA-2026-${String(t.numero).padStart(4, '0')}`,
+            cantidadCabezas: t.cantidadCabezas,
+            estado: estadoT,
+            pesoBruto: t.pesoVivo ? t.pesoVivo * 1.15 : null,
+            pesoNeto: t.pesoVivo ?? null,
+            observaciones: obs.length > 0 ? obs.join(' | ') : undefined,
+            fechaFaena: t.fechaFaena ? new Date(t.fechaFaena + 'T12:00:00') : null,
+            kgGancho: t.kgGancho ?? null,
+          }
+          const r = await prisma.tropa.upsert({
+            where: { numero: t.numero },
+            update: tropaData,
+            create: {
+              ...tropaData,
+              numero: t.numero,
+              fechaRecepcion: t.fechaIngreso ? new Date(t.fechaIngreso + 'T12:00:00') : (t.fechaFaena ? new Date(t.fechaFaena + 'T12:00:00') : new Date()),
+            },
+          })
           tropaIdMap.set(t.numero, r.id); tropaCodigoMap.set(t.numero, t.codigo)
           Math.abs(r.createdAt.getTime() - r.updatedAt.getTime()) < 1000 ? tc++ : tu++
         } catch (err) { console.warn(`  ⚠️  Tropa #${t.numero}: ${(err as Error).message}`) }
@@ -318,6 +341,100 @@ async function main() {
       logOk('Numeradores creados/actualizados', nc); logOk('Numeradores mantenidos', nm)
     } catch (e) { logErr('Error en numeradores', e) }
 
+    // ═══ PASO 13: Listas de Faena (generadas desde fechas de faena de tropas) ═══
+    logHeader('1️⃣3️⃣ Listas de Faena (históricas)')
+    try {
+      const tropasData = readJsonFile<{ numero: number; fechaFaena: string | null; cantidadCabezas: number; corral: string | null }>('tropas.json')
+
+      // Agrupar tropas por fechaFaena
+      const fechasMap = new Map<string, { numero: number; cantidadCabezas: number; corral: string | null }[]>()
+      for (const t of tropasData) {
+        if (!t.fechaFaena || !tropaIdMap.has(t.numero)) continue
+        const fecha = t.fechaFaena
+        if (!fechasMap.has(fecha)) fechasMap.set(fecha, [])
+        fechasMap.get(fecha)!.push({ numero: t.numero, cantidadCabezas: t.cantidadCabezas, corral: t.corral })
+      }
+
+      // Obtener el próximo número de lista
+      const maxListaNum = await prisma.listaFaena.aggregate({ _max: { numero: true } })
+      let proximoNumero = (maxListaNum._max.numero || 0) + 1
+
+      // Verificar listas existentes para no duplicar
+      const listasExistentes = await prisma.listaFaena.findMany({
+        select: { fecha: true, estado: true },
+      })
+      const fechasConLista = new Set<string>()
+      for (const l of listasExistentes) {
+        fechasConLista.add(l.fecha.toISOString().split('T')[0])
+      }
+
+      let listasCreadas = 0
+      let listasSaltadas = 0
+      let totalTropasEnListas = 0
+
+      for (const [fecha, tropasFecha] of [...fechasMap.entries()].sort()) {
+        if (fechasConLista.has(fecha)) {
+          listasSaltadas++
+          continue
+        }
+
+        const fechaMidday = new Date(fecha + 'T12:00:00')
+        const totalCabezas = tropasFecha.reduce((sum, t) => sum + (t.cantidadCabezas || 0), 0)
+
+        // Crear la lista de faena (estado CERRADA porque es histórica)
+        const lista = await prisma.listaFaena.create({
+          data: {
+            numero: proximoNumero,
+            fecha: fechaMidday,
+            estado: 'CERRADA',
+            cantidadTotal: totalCabezas,
+            fechaCierre: fechaMidday,
+          },
+        })
+        proximoNumero++
+
+        // Crear las relaciones tropa → lista
+        for (const t of tropasFecha) {
+          const tropaId = tropaIdMap.get(t.numero)
+          if (!tropaId) continue
+
+          // Obtener corralId si existe
+          let corralId: string | null = null
+          if (t.corral) {
+            // Los corrales pueden ser compuestos (ej: "D-01,D-02"), tomar el primero
+            const primerCorral = t.corral.split(',')[0].trim().split(/[-\s]/)[0] + '-' + t.corral.split(',')[0].trim().split(/[-\s]/)[1]
+            try {
+              const corralRecord = await prisma.corral.findFirst({
+                where: { nombre: { contains: primerCorral } },
+              })
+              if (corralRecord) corralId = corralRecord.id
+            } catch { /* corral no encontrado, ok */ }
+          }
+
+          try {
+            await prisma.listaFaenaTropa.create({
+              data: {
+                listaFaenaId: lista.id,
+                tropaId,
+                cantidad: t.cantidadCabezas,
+                corralId,
+              },
+            })
+            totalTropasEnListas++
+          } catch (err) {
+            // Si ya existe la relación (lista + tropa), ignorar
+            console.warn(`  ⚠️  ListaFaenaTropa (lista ${lista.numero}, tropa #${t.numero}): ${(err as Error).message}`)
+          }
+        }
+
+        listasCreadas++
+      }
+
+      logOk('Listas de faena creadas', listasCreadas)
+      logOk('Listas ya existentes (saltadas)', listasSaltadas)
+      logOk('Total tropas vinculadas a listas', totalTropasEnListas)
+    } catch (e) { logErr('Error en listas de faena', e) }
+
     // ═══ RESUMEN ═══
     logHeader('📊 Resumen del Seed')
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2)
@@ -329,6 +446,7 @@ async function main() {
     console.log(`     • Clientes: ${clientes.length} | Tropas: ${tropaIdMap.size}`)
     console.log('     • Animales, Romaneos, Facturas, Menudencias: upsert/skip')
     console.log('     • Numeradores: solo avanzan, nunca retroceden')
+    console.log('     • Listas de Faena: generadas desde fechas de faena de tropas')
     console.log(`\n  ✅ Todos los datos del usuario fueron PRESERVADOS intactos.`)
     console.log('\n🎉 Seed completado exitosamente!\n')
   } catch (error) {
