@@ -147,7 +147,7 @@ function findCliente(
 // ─── LIMPIEZA TOTAL ────────────────────────────────────────────────────────────
 
 async function limpiarBaseDeDatos() {
-  logHeader('🗑️  LIMPIEZA TOTAL - Eliminando TODOS los datos existentes')
+  logHeader('🗑️  LIMPIEZA - Eliminando datos del Excel (preservando datos del usuario)')
 
   // Detectar si es PostgreSQL o SQLite por la URL de conexión
   const dbUrl = process.env.DATABASE_URL || ''
@@ -156,7 +156,6 @@ async function limpiarBaseDeDatos() {
   try {
     if (isPostgres) {
       console.log('  ⚙️  Base de datos: PostgreSQL')
-      // Desactivar FK en PostgreSQL
       await prisma.$executeRawUnsafe('SET session_replication_role = \'replica\'')
       console.log('  ⚙️  Foreign keys desactivadas')
     } else {
@@ -165,85 +164,41 @@ async function limpiarBaseDeDatos() {
       console.log('  ⚙️  Foreign keys desactivadas')
     }
 
-    // Tablas con datos que dependen de otras (orden inverso de dependencias)
-    const tablas = [
+    // ── Tablas que se BORRAN y recargan desde el Excel ──
+    const tablasExcel = [
       // Ciclo II
-      'MovimientoDespostada',
-      'MermaDespostada',
-      'CajaEmpaque',
-      'Cuarto',
-      'LoteDespostada',
-      'ExpedicionCicloII',
-      'Pallet',
-
+      'MovimientoDespostada', 'MermaDespostada', 'CajaEmpaque', 'Cuarto',
+      'LoteDespostada', 'ExpedicionCicloII', 'Pallet',
       // Despachos
-      'DespachoItem',
-      'Despacho',
-
+      'DespachoItem', 'Despacho',
       // Precios
-      'HistorialPrecioCorte',
-      'PrecioCorte',
-      'HistorialPrecio',
-      'PrecioCliente',
-
+      'HistorialPrecioCorte', 'PrecioCorte', 'HistorialPrecio', 'PrecioCliente',
       // Reclamos
-      'ArchivoReclamo',
-      'RespuestaReclamo',
-      'ReclamoCliente',
-
+      'ArchivoReclamo', 'RespuestaReclamo', 'ReclamoCliente',
       // Emails
-      'HistorialEnvio',
-      'ProgramacionReporte',
-      'DestinatarioReporte',
-
+      'HistorialEnvio', 'ProgramacionReporte', 'DestinatarioReporte',
       // Barras
-      'CodigoDestinoBarcode',
-      'CodigoTransporteBarcode',
-      'CodigoTrabajoBarcode',
-      'CodigoTipificacionBarcode',
-      'CodigoEspecieBarcode',
-      'CodigoArticulo',
+      'CodigoDestinoBarcode', 'CodigoTransporteBarcode', 'CodigoTrabajoBarcode',
+      'CodigoTipificacionBarcode', 'CodigoEspecieBarcode', 'CodigoArticulo',
       'NumeradorCicloII',
-
       // Rendering y Cueros
-      'RegistroRendering',
-      'RegistroCuero',
-
+      'RegistroRendering', 'RegistroCuero',
       // Facturación
-      'DetalleFactura',
-      'Factura',
-
+      'DetalleFactura', 'Factura',
       // Menudencias
       'Menudencia',
-      'TipoMenudencia',
-
       // Romaneo / Medias Reses
-      'MediaRes',
-      'StockMediaRes',
-      'MovimientoCamara',
-      'Romaneo',
-
+      'MediaRes', 'StockMediaRes', 'MovimientoCamara', 'Romaneo',
       // Faena
-      'AsignacionGarron',
-      'ListaFaenaTropa',
-      'ListaFaena',
-
+      'AsignacionGarron', 'ListaFaenaTropa', 'ListaFaena',
       // Animales / Pesaje
-      'PesajeIndividual',
-      'PesajeCamion',
-      'TropaAnimalCantidad',
-      'Animal',
-      'Tropa',
-
-      // Auditoría
-      'Auditoria',
-
+      'PesajeIndividual', 'PesajeCamion', 'TropaAnimalCantidad', 'Animal', 'Tropa',
       // Documentos
-      'CCIR',
-      'DeclaracionJurada',
+      'CCIR', 'DeclaracionJurada',
+    ]
 
-      // Maestros
-      'Operador',
+    // ── Tablas de datos del Excel que son maestros (se recargan) ──
+    const tablasMaestros = [
       'Cliente',
       'Transportista',
       'Corral',
@@ -252,22 +207,23 @@ async function limpiarBaseDeDatos() {
       'Producto',
       'Insumo',
       'TipoProducto',
+      'TipoMenudencia',
       'SubproductoConfig',
       'CondicionEmbalaje',
       'Rotulo',
-      'Numerador',
       'LayoutGlobalModulo',
-
-      // Códigos
       'CodigoEspecie',
       'CodigoTransporte',
       'CodigoDestino',
       'CodigoTipoTrabajo',
       'CodigoTipificacion',
-
-      // Configuración
-      'ConfiguracionFrigorifico',
     ]
+
+    // ── Tablas PRESERVADAS (datos del usuario, NO se borran) ──
+    // Operador, Numerador, ConfiguracionFrigorifico, Auditoria, ConfiguracionPH
+    // Estos se crean con upsert si no existen, pero si ya están no se tocan.
+
+    const tablas = [...tablasExcel, ...tablasMaestros]
 
     if (isPostgres) {
       // En PostgreSQL usar TRUNCATE CASCADE (más rápido y limpio)
@@ -304,7 +260,8 @@ async function limpiarBaseDeDatos() {
       console.log('  ⚙️  Foreign keys reactivadas')
     }
 
-    console.log('  ✅ Base de datos limpiada completamente')
+    console.log('  ✅ Base de datos limpiada (datos del usuario preservados)')
+    console.log('  ℹ️  Preservados: Operador, Numerador, Configuración, Auditoría')
   } catch (error) {
     console.error('  ❌ Error durante la limpieza:', error)
     throw error
@@ -323,12 +280,14 @@ async function main() {
   await limpiarBaseDeDatos()
 
   try {
-    // ═══ PASO 1: Operador Admin ═══
+    // ═══ PASO 1: Operador Admin (UPSERT - no borra operadores existentes) ═══
     logHeader('1️⃣  Operador Administrador')
     try {
       const hashedPassword = await bcrypt.hash('admin123', 10)
-      const admin = await prisma.operador.create({
-        data: {
+      const admin = await prisma.operador.upsert({
+        where: { usuario: 'admin' },
+        update: {}, // Si ya existe, no tocarlo
+        create: {
           nombre: 'Administrador',
           usuario: 'admin',
           password: hashedPassword,
@@ -348,18 +307,26 @@ async function main() {
           puedeCCIR: true,
           puedeFacturacion: true,
           puedeConfiguracion: true,
+          puedeDesposte: true,
+          puedeCuarteo: true,
+          puedeEmpaque: true,
+          puedeExpedicionC2: true,
+          puedeCalidad: true,
+          puedeAutorizarReportes: true,
         },
       })
-      logOk('Operador admin creado', admin.usuario)
+      logOk('Operador admin asegurado', admin.usuario)
     } catch (e) {
       logErr('Error creando operador admin', e)
     }
 
-    // ═══ PASO 2: Configuración del Frigorífico ═══
+    // ═══ PASO 2: Configuración del Frigorífico (UPSERT - no toca si ya existe) ═══
     logHeader('2️⃣  Configuración del Frigorífico')
     try {
-      const config = await prisma.configuracionFrigorifico.create({
-        data: {
+      const config = await prisma.configuracionFrigorifico.upsert({
+        where: { id: 'cfg-solemar' },
+        update: {}, // Si ya existe, no tocarlo
+        create: {
           id: 'cfg-solemar',
           nombre: 'Solemar Alimentaria',
           direccion: 'Ruta Provincial N°7, Km 1180',
@@ -368,7 +335,7 @@ async function main() {
           numeroMatricula: 'N° 1234',
         },
       })
-      logOk('Configuración creada', config.nombre)
+      logOk('Configuración asegurada', config.nombre)
     } catch (e) {
       logErr('Error creando configuración', e)
     }
@@ -1055,21 +1022,28 @@ async function main() {
       logErr('Error creando menudencias', e)
     }
 
-    // ═══ PASO 12: Numeradores ═══
+    // ═══ PASO 12: Numeradores (UPSERT - preserva numeración actual) ═══
     logHeader('1️⃣2️⃣ Numeradores')
     try {
-      await prisma.numerador.createMany({
-        data: [
-          { nombre: 'TROPA_BOVINO', ultimoNumero: 200, anio: 2026 },
-          { nombre: 'TROPA_EQUINO', ultimoNumero: 0, anio: 2026 },
-          { nombre: 'FACTURA', ultimoNumero: 172, anio: 2026 },
-          { nombre: 'TICKET', ultimoNumero: 0, anio: 2026 },
-          { nombre: 'ROMANEO', ultimoNumero: 1861, anio: 2026 },
-          { nombre: 'PESAJE_CAMION', ultimoNumero: 0, anio: 2026 },
-          { nombre: 'MENUDENCIA', ultimoNumero: 0, anio: 2026 },
-        ],
-      })
-      logOk('Numeradores creados', 7)
+      const defaults = [
+        { nombre: 'TROPA_BOVINO', ultimoNumero: 200, anio: 2026 },
+        { nombre: 'TROPA_EQUINO', ultimoNumero: 0, anio: 2026 },
+        { nombre: 'FACTURA', ultimoNumero: 172, anio: 2026 },
+        { nombre: 'TICKET', ultimoNumero: 0, anio: 2026 },
+        { nombre: 'ROMANEO', ultimoNumero: 1861, anio: 2026 },
+        { nombre: 'PESAJE_CAMION', ultimoNumero: 0, anio: 2026 },
+        { nombre: 'MENUDENCIA', ultimoNumero: 0, anio: 2026 },
+      ]
+      let creados = 0
+      for (const num of defaults) {
+        await prisma.numerador.upsert({
+          where: { nombre: num.nombre },
+          update: {}, // Si existe, no modificar (preserva la numeración actual)
+          create: num,
+        })
+        creados++
+      }
+      logOk('Numeradores asegurados', creados)
     } catch (e) {
       logErr('Error creando numeradores', e)
     }
