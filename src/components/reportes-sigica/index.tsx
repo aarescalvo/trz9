@@ -26,6 +26,7 @@ interface RomaneoRecord {
   pesoTotal: number
   denticion: string
   tipoAnimal: string
+  clasificacion: string
   raza: string
   tipificador: string
 }
@@ -132,6 +133,7 @@ export function ReportesSIGICAModule({ operador }: { operador: Operador }) {
               pesoTotal: r.pesoTotal || 0,
               denticion: r.denticion || '',
               tipoAnimal: r.tipoAnimal || '',
+              clasificacion: r.clasificacion || '',
               raza: r.raza || '',
               tipificador: r.tipificador || '',
             })))
@@ -199,6 +201,16 @@ export function ReportesSIGICAModule({ operador }: { operador: Operador }) {
   }
 
   // --- CSV export ---
+  // Helper para armar clasificacion SIGICA: "2D - NT"
+  const buildClasificacionCSV = (denticion: string, tipoAnimal: string): string => {
+    const num = denticion.replace(/\D/g, '')
+    const prefix = num ? `${num}D` : ''
+    const tipo = tipoAnimal || ''
+    if (prefix && tipo) return `${prefix} - ${tipo}`
+    if (tipo) return tipo
+    return ''
+  }
+
   const exportCSV = () => {
     if (!selectedType) return
 
@@ -207,9 +219,9 @@ export function ReportesSIGICAModule({ operador }: { operador: Operador }) {
 
     switch (selectedType) {
       case 'romaneos': {
-        const headers = ['Garrón', 'Tropa', 'Especie', 'Peso Vivo', 'Peso Total', 'Denticion', 'Tipo Animal', 'Raza', 'Tipificador']
+        const headers = ['Garrón', 'Tropa', 'Especie', 'Peso Vivo', 'Peso Total', 'Clasificación', 'Raza', 'Tipificador']
         csvContent = [headers.join(';'), ...romaneos.map(r =>
-          [r.garron, r.tropa, r.especie, r.pesoVivo, r.pesoTotal, r.denticion, r.tipoAnimal, r.raza, r.tipificador].join(';')
+          [r.garron, r.tropa, r.especie, r.pesoVivo, r.pesoTotal, r.clasificacion || buildClasificacionCSV(r.denticion, r.tipoAnimal), r.raza, r.tipificador].join(';')
         )].join('\n')
         filename = `romaneos_sigica_${fechaDesde}_${fechaHasta}.csv`
         break
@@ -428,8 +440,7 @@ export function ReportesSIGICAModule({ operador }: { operador: Operador }) {
                     <TableHead>Especie</TableHead>
                     <TableHead className="text-right">Peso Vivo</TableHead>
                     <TableHead className="text-right">Peso Total</TableHead>
-                    <TableHead className="text-center">Denticion</TableHead>
-                    <TableHead>Tipo Animal</TableHead>
+                    <TableHead className="text-center">Clasificación</TableHead>
                     <TableHead>Raza</TableHead>
                     <TableHead>Tipificador</TableHead>
                   </TableRow>
@@ -453,8 +464,7 @@ export function ReportesSIGICAModule({ operador }: { operador: Operador }) {
                       </TableCell>
                       <TableCell className="text-right font-mono">{formatNumber(r.pesoVivo)} kg</TableCell>
                       <TableCell className="text-right font-mono font-medium">{formatNumber(r.pesoTotal)} kg</TableCell>
-                      <TableCell className="text-center font-mono">{r.denticion || '-'}</TableCell>
-                      <TableCell className="font-mono text-xs">{r.tipoAnimal || '-'}</TableCell>
+                      <TableCell className="text-center font-mono text-xs font-medium">{r.clasificacion || buildClasificacionCSV(r.denticion, r.tipoAnimal) || '-'}</TableCell>
                       <TableCell>{r.raza || '-'}</TableCell>
                       <TableCell className="text-stone-500 text-xs">{r.tipificador || '-'}</TableCell>
                     </TableRow>

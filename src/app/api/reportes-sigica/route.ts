@@ -52,21 +52,29 @@ export async function GET(request: NextRequest) {
           cuit,
           fechaGeneracion: new Date().toISOString(),
           totalRegistros: romaneos.length,
-          registros: romaneos.map(r => ({
-            garron: r.garron,
-            tropa: r.tropaCodigo || '-',
-            especie: 'BOVINO',
-            fecha: r.fecha,
-            pesoVivo: r.pesoVivo,
-            pesoTotal: r.pesoTotal,
-            pesoMediaIzq: r.pesoMediaIzq,
-            pesoMediaDer: r.pesoMediaDer,
-            denticion: r.denticion,
-            tipoAnimal: r.tipoAnimal,
-            raza: r.raza,
-            tipificador: r.tipificador?.matricula || '',
-            tipificadorNombre: r.tipificador?.nombre || ''
-          }))
+          registros: romaneos.map(r => {
+            // Armar clasificacion SIGICA: "2D - NT"
+            const numDientes = (r.denticion || '').replace(/\D/g, '')
+            const prefix = numDientes ? `${numDientes}D` : ''
+            const tipo = r.tipoAnimal || ''
+            const clasificacion = prefix && tipo ? `${prefix} - ${tipo}` : tipo || ''
+            return {
+              garron: r.garron,
+              tropa: r.tropaCodigo || '-',
+              especie: 'BOVINO',
+              fecha: r.fecha,
+              pesoVivo: r.pesoVivo,
+              pesoTotal: r.pesoTotal,
+              pesoMediaIzq: r.pesoMediaIzq,
+              pesoMediaDer: r.pesoMediaDer,
+              denticion: r.denticion,
+              tipoAnimal: r.tipoAnimal,
+              clasificacion,
+              raza: r.raza,
+              tipificador: r.tipificador?.matricula || '',
+              tipificadorNombre: r.tipificador?.nombre || ''
+            }
+          })
         }
         break
       }
