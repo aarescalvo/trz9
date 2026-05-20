@@ -220,6 +220,9 @@ async function getFechasFaena(fechaDesde?: string | null, fechaHasta?: string | 
       },
       supervisor: {
         select: { nombre: true }
+      },
+      vbRomaneoOperador: {
+        select: { nombre: true }
       }
     },
     orderBy: { fecha: 'desc' },
@@ -233,7 +236,9 @@ async function getFechasFaena(fechaDesde?: string | null, fechaHasta?: string | 
       id: string
       numero: number
       cantidadTotal: number
+      fecha: Date
       estado: string
+      vbRomaneo: boolean
       supervisor: string | null
       tropas: Array<{ codigo: string; especie: string }>
     }>
@@ -252,21 +257,29 @@ async function getFechasFaena(fechaDesde?: string | null, fechaHasta?: string | 
       id: lista.id,
       numero: lista.numero,
       cantidadTotal: lista.cantidadTotal,
+      fecha: lista.fecha,
       estado: lista.estado,
+      vbRomaneo: lista.vbRomaneo,
       supervisor: lista.supervisor?.nombre || null,
       tropas: lista.tropas.map(t => ({ codigo: t.tropa.codigo, especie: t.tropa.especie }))
     })
   }
 
-  const fechas = Array.from(fechasMap.values()).map(f => ({
-    fecha: f.fecha,
-    fechaStr: f.fecha.toLocaleDateString('es-AR'),
-    totalAnimales: f.listas.reduce((sum, l) => sum + l.cantidadTotal, 0),
-    todasCerradas: f.listas.every(l => l.estado === 'CERRADA'),
-    supervisor: f.listas[0]?.supervisor,
-    listas: f.listas,
-    listaIds: f.listas.map(l => l.id)
-  }))
+  const fechas = Array.from(fechasMap.values()).map(f => {
+    const todasVb = f.listas.length > 0 && f.listas.every(l => l.vbRomaneo)
+    const ultimaListaVb = [...f.listas].reverse().find(l => l.vbRomaneo)
+    
+    return {
+      fecha: f.fecha,
+      fechaStr: f.fecha.toLocaleDateString('es-AR'),
+      totalAnimales: f.listas.reduce((sum, l) => sum + l.cantidadTotal, 0),
+      vbRomaneo: todasVb,
+      vbRomaneoFecha: ultimaListaVb ? undefined : null, // Se calcula por lista individual
+      vbRomaneoOperador: ultimaListaVb?.supervisor || null,
+      listas: f.listas,
+      listaIds: f.listas.map(l => l.id)
+    }
+  })
 
   return NextResponse.json({
     success: true,
@@ -521,13 +534,14 @@ async function darVistoBueno(data: { listaIds: string[]; operadorId: string }) {
 
   const ahora = new Date()
 
-  // TODO: ListaFaena doesn't have vbRomaneo fields. Consider closing the lista (estado: 'CERRADA')
-  // and tracking the supervisor who approved via a separate mechanism or using estado field.
   await db.listaFaena.updateMany({
     where: { id: { in: listaIds } },
     data: {
       estado: 'CERRADA',
-      supervisorId: operadorId
+      supervisorId: operadorId,
+      vbRomaneo: true,
+      vbRomaneoFecha: ahora,
+      vbRomaneoOperadorId: operadorId
     }
   })
 
@@ -546,12 +560,14 @@ async function quitarVistoBueno(data: { listaIds: string[] }) {
     return NextResponse.json({ success: false, error: 'No se especificaron listas' }, { status: 400 })
   }
 
-  // TODO: ListaFaena doesn't have vbRomaneo fields. Consider reopening the lista.
   await db.listaFaena.updateMany({
     where: { id: { in: listaIds } },
     data: {
       estado: 'ABIERTA',
-      supervisorId: null
+      supervisorId: null,
+      vbRomaneo: false,
+      vbRomaneoFecha: null,
+      vbRomaneoOperadorId: null
     }
   })
 

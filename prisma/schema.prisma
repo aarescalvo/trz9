@@ -226,6 +226,7 @@ model Operador {
   pesajesIndividuales  PesajeIndividual[]
   tropasCreadas        Tropa[]
   listasFaena          ListaFaena[]
+  vbRomaneoListas      ListaFaena[]  @relation("VBRomaneoOperador")
   romaneos             Romaneo[]
   movimientosCorral    MovimientoCorral[]
   movimientosCamara    MovimientoCamara[]
@@ -764,6 +765,12 @@ model ListaFaena {
   supervisorId  String?
   supervisor    Operador?       @relation(fields: [supervisorId], references: [id])
   fechaCierre   DateTime?
+  
+  // VB Romaneo
+  vbRomaneo           Boolean       @default(false)  // Visto bueno otorgado
+  vbRomaneoFecha      DateTime?                      // Fecha del VB
+  vbRomaneoOperadorId String?                        // Quien dio el VB
+  vbRomaneoOperador   Operador?     @relation("VBRomaneoOperador", fields: [vbRomaneoOperadorId], references: [id])
   
   observaciones String?
   
