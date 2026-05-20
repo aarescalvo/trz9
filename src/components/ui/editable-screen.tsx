@@ -273,6 +273,10 @@ export function EditableBlock({ bloqueId, label, children, className }: Editable
   )
 }
 
+// ==================== CACHE CLIENTE PARA LAYOUT ====================
+const layoutCache = new Map<string, { data: unknown; timestamp: number }>()
+const LAYOUT_CACHE_TTL = 10 * 60 * 1000 // 10 minutos
+
 // ==================== WRAPPER PRINCIPAL ====================
 interface EditableScreenWrapperProps {
   moduloId: string
@@ -297,8 +301,22 @@ export function EditableScreenWrapper({ moduloId, operador, children, bloquesIni
 
   const fetchLayout = async () => {
     try {
+      // Revisar cache cliente primero
+      const cached = layoutCache.get(moduloId)
+      if (cached && (Date.now() - cached.timestamp) < LAYOUT_CACHE_TTL) {
+        const data = cached.data as { success: boolean; data?: { bloques?: BloqueLayout[]; layout?: { items?: BloqueLayout[] }; textos?: Record<string, string> } }
+        if (data.data?.bloques?.length) setBloques(data.data.bloques)
+        else if (data.data?.layout?.items?.length) setBloques(data.data.layout.items)
+        if (data.data?.textos) setTextos(data.data.textos)
+        setLoaded(true)
+        return
+      }
+
       const res = await fetch(`/api/layout-modulo?modulo=${moduloId}`)
       const data = await res.json()
+      
+      // Guardar en cache cliente
+      layoutCache.set(moduloId, { data, timestamp: Date.now() })
       
       if (data.success) {
         if (data.data?.bloques?.length) setBloques(data.data.bloques)
@@ -361,6 +379,8 @@ export function EditableScreenWrapper({ moduloId, operador, children, bloquesIni
         toast.success('Layout guardado correctamente')
         setEditMode(false)
         setShowConfigPanel(false)
+        // Invalidar cache cliente al guardar
+        layoutCache.delete(moduloId)
       } else {
         toast.error(data.error || 'Error al guardar')
       }

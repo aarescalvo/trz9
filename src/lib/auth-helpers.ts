@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { createLogger } from '@/lib/logger'
+import { cacheGet, cacheSet, CACHE_TTL } from '@/lib/cache'
 
 const logger = createLogger('AuthHelpers')
 
@@ -24,6 +25,11 @@ export function getOperadorId(request: NextRequest): string | null {
 export async function validarPermiso(operadorId: string | null | undefined, permiso: string): Promise<boolean> {
   if (!operadorId) return false
 
+  // Revisar cache primero
+  const cacheKey = `perm:${operadorId}:${permiso}`
+  const cached = cacheGet<boolean>(cacheKey)
+  if (cached !== null) return cached
+
   type OperadorPermCheck = {
     rol: string
     activo: boolean
@@ -45,13 +51,17 @@ export async function validarPermiso(operadorId: string | null | undefined, perm
   }
 
   // ADMINISTRADOR tiene todos los permisos
-  if (operador.rol === 'ADMINISTRADOR') return true
+  if (operador.rol === 'ADMINISTRADOR') {
+    cacheSet(cacheKey, true, CACHE_TTL.MEDIUM)
+    return true
+  }
 
   // Verificar el permiso específico
   const hasSpecific = operador[permiso] === true
   if (!hasSpecific) {
     logger.warn('validarPermiso: permiso específico denegado', { operadorId, permiso, rol: operador.rol, valor: operador[permiso] })
   }
+  cacheSet(cacheKey, hasSpecific, CACHE_TTL.MEDIUM)
   return hasSpecific
 }
 
@@ -69,6 +79,11 @@ export async function validarPermisoAny(
 ): Promise<boolean> {
   if (!operadorId) return false
 
+  // Revisar cache para admin check
+  const adminCacheKey = `perm:${operadorId}:admin`
+  const cachedAdmin = cacheGet<boolean>(adminCacheKey)
+  if (cachedAdmin === true) return true
+
   // ADMINISTRADOR tiene todos los permisos
   const operador = await db.operador.findUnique({
     where: { id: operadorId },
@@ -76,7 +91,10 @@ export async function validarPermisoAny(
   })
 
   if (!operador || !operador.activo) return false
-  if (operador.rol === 'ADMINISTRADOR') return true
+  if (operador.rol === 'ADMINISTRADOR') {
+    cacheSet(adminCacheKey, true, CACHE_TTL.MEDIUM)
+    return true
+  }
 
   for (const permiso of permisos) {
     const has = await validarPermiso(operadorId, permiso)
@@ -185,6 +203,10 @@ export async function checkPermission(
 export async function validarRolAdmin(operadorId: string | null | undefined): Promise<boolean> {
   if (!operadorId) return false
 
+  const cacheKey = `perm:${operadorId}:admin`
+  const cached = cacheGet<boolean>(cacheKey)
+  if (cached !== null) return cached
+
   const operador = await db.operador.findUnique({
     where: { id: operadorId },
     select: { rol: true, activo: true }
@@ -193,7 +215,9 @@ export async function validarRolAdmin(operadorId: string | null | undefined): Pr
   if (!operador) return false
   if (!operador.activo) return false
 
-  return operador.rol === 'ADMINISTRADOR'
+  const isAdmin = operador.rol === 'ADMINISTRADOR'
+  cacheSet(cacheKey, isAdmin, CACHE_TTL.MEDIUM)
+  return isAdmin
 }
 
 /**
