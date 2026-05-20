@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
       equinos: number
       tropas: Map<string, {
         id: string
+        numero: number
         codigo: string
         especie: string
         cantidadCabezas: number
@@ -43,6 +44,9 @@ export async function GET(request: NextRequest) {
         productor?: { nombre: string } | null
         usuarioFaena?: { nombre: string } | null
         fechaRecepcion: string
+        dte: string | null
+        guia: string | null
+        observaciones: string | null
       }>
     }> = {}
 
@@ -65,13 +69,17 @@ export async function GET(request: NextRequest) {
       if (!stockPorCorral[corralId].tropas.has(tropaId)) {
         stockPorCorral[corralId].tropas.set(tropaId, {
           id: animal.tropa.id,
+          numero: animal.tropa.numero,
           codigo: animal.tropa.codigo,
           especie: animal.tropa.especie,
           cantidadCabezas: 1,
           estado: animal.tropa.estado,
           productor: animal.tropa.productor,
           usuarioFaena: animal.tropa.usuarioFaena,
-          fechaRecepcion: animal.tropa.fechaRecepcion.toISOString()
+          fechaRecepcion: animal.tropa.fechaRecepcion.toISOString(),
+          dte: animal.tropa.dte,
+          guia: animal.tropa.guia,
+          observaciones: animal.tropa.observaciones
         })
       } else {
         // Incrementar cantidad de animales de esta tropa en el corral
