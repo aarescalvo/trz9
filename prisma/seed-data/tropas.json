@@ -4389,7 +4389,7 @@
     "estado": "FAENADO",
     "pesoVivo": 16035.0,
     "kgGancho": 9559.8,
-    "rindePct": 0.5961833489242282,
+    "rindePct": 0.5961833489,
     "observaciones": null
   },
   {
@@ -4410,9 +4410,9 @@
     "fechaFaena": "2026-05-18",
     "fechaIngreso": "2026-05-17",
     "estado": "FAENADO",
-    "pesoVivo": 11943,
-    "kgGancho": 6950.8,
-    "rindePct": 0.582,
+    "pesoVivo": 11500,
+    "kgGancho": 6496.3,
+    "rindePct": 0.5648956522,
     "observaciones": null
   },
   {
@@ -4433,9 +4433,9 @@
     "fechaFaena": "2026-05-20",
     "fechaIngreso": "2026-05-19",
     "estado": "FAENADO",
-    "pesoVivo": 796,
-    "kgGancho": 463.3,
-    "rindePct": 0.582,
+    "pesoVivo": 760,
+    "kgGancho": 442.1,
+    "rindePct": 0.5817105263,
     "observaciones": null
   },
   {
@@ -4456,9 +4456,9 @@
     "fechaFaena": "2026-05-20",
     "fechaIngreso": "2026-05-19",
     "estado": "FAENADO",
-    "pesoVivo": 3981,
-    "kgGancho": 2316.9,
-    "rindePct": 0.582,
+    "pesoVivo": 3522,
+    "kgGancho": 1977.8,
+    "rindePct": 0.5615559341,
     "observaciones": null
   },
   {
@@ -4479,9 +4479,9 @@
     "fechaFaena": "2026-05-20",
     "fechaIngreso": "2026-05-19",
     "estado": "FAENADO",
-    "pesoVivo": 6370,
-    "kgGancho": 3707.3,
-    "rindePct": 0.582,
+    "pesoVivo": 6332,
+    "kgGancho": 3666.2,
+    "rindePct": 0.578995578,
     "observaciones": null
   },
   {
@@ -4491,7 +4491,7 @@
     "cantidadCabezas": 4,
     "productorNombre": "RUFFINI GABRIEL HORACIO",
     "productorCuit": "20-21517858-8",
-    "usuarioFaenaNombre": "FERREYRA PAOLA ANDREA",
+    "usuarioFaenaNombre": "FERREYRA ANDREA PAOLA",
     "usuarioFaenaCuit": "27-29287814-7",
     "dte": "31808784-9",
     "guia": "G-CHO26-02760",
@@ -4502,9 +4502,9 @@
     "fechaFaena": "2026-05-20",
     "fechaIngreso": "2026-05-19",
     "estado": "FAENADO",
-    "pesoVivo": 1592,
-    "kgGancho": 926.5,
-    "rindePct": 0.582,
+    "pesoVivo": 1248,
+    "kgGancho": 703.3,
+    "rindePct": 0.5635416667,
     "observaciones": null
   },
   {
@@ -4525,9 +4525,9 @@
     "fechaFaena": "2026-05-20",
     "fechaIngreso": "2026-05-19",
     "estado": "FAENADO",
-    "pesoVivo": 796,
-    "kgGancho": 463.3,
-    "rindePct": 0.582,
+    "pesoVivo": 661,
+    "kgGancho": 368.0,
+    "rindePct": 0.5567322239,
     "observaciones": null
   },
   {
@@ -4548,9 +4548,9 @@
     "fechaFaena": "2026-05-20",
     "fechaIngreso": "2026-05-19",
     "estado": "FAENADO",
-    "pesoVivo": 5972,
-    "kgGancho": 3475.7,
-    "rindePct": 0.582,
+    "pesoVivo": 6125,
+    "kgGancho": 3623.4,
+    "rindePct": 0.5915755102,
     "observaciones": null
   },
   {
@@ -4560,7 +4560,7 @@
     "cantidadCabezas": 10,
     "productorNombre": "BOSQUE AMADO SRL",
     "productorCuit": "30-70777069-0",
-    "usuarioFaenaNombre": "BOSQUE AMADO SRL",
+    "usuarioFaenaNombre": "BOSQUES AMADOS SRL",
     "usuarioFaenaCuit": "30-70777069-0",
     "dte": "31798020-5",
     "guia": "G-CHO26-02736",
@@ -4571,9 +4571,9 @@
     "fechaFaena": "2026-05-20",
     "fechaIngreso": "2026-05-19",
     "estado": "FAENADO",
-    "pesoVivo": 3981,
-    "kgGancho": 2316.9,
-    "rindePct": 0.582,
+    "pesoVivo": 4407,
+    "kgGancho": 2613.0,
+    "rindePct": 0.592920354,
     "observaciones": null
   }
 ]
