@@ -182,12 +182,12 @@ export function Planilla01Module({ operador }: Props) {
       doc.text(`AÑO: ${new Date(tropaSeleccionada.fechaRecepcion).getFullYear()}`, 80, 35)
       doc.text(`FECHA: ${new Date(tropaSeleccionada.fechaRecepcion).toLocaleDateString('es-AR')}`, 140, 35)
       
-      // Datos del productor
+      // Datos del usuario de faena
       doc.setFont('helvetica', 'bold')
-      doc.text('DATOS DEL PRODUCTOR / USUARIO FAENA', 14, 45)
+      doc.text('DATOS DEL USUARIO FAENA / PRODUCTOR', 14, 45)
       doc.setFont('helvetica', 'normal')
-      doc.text(`Productor: ${tropaSeleccionada.productor?.nombre || tropaSeleccionada.usuarioFaena?.nombre || '-'}`, 14, 52)
-      doc.text(`CUIT: ${tropaSeleccionada.productor?.cuit || tropaSeleccionada.usuarioFaena?.cuit || '-'}`, 120, 52)
+      doc.text(`Usuario Faena: ${tropaSeleccionada.usuarioFaena?.nombre || tropaSeleccionada.productor?.nombre || '-'}`, 14, 52)
+      doc.text(`CUIT: ${tropaSeleccionada.usuarioFaena?.cuit || tropaSeleccionada.productor?.cuit || '-'}`, 120, 52)
       doc.text(`Tropa N°: ${tropaSeleccionada.codigo || '-'}`, 200, 52)
       
       // Datos del transporte
@@ -350,7 +350,7 @@ export function Planilla01Module({ operador }: Props) {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-medium text-stone-800">{tropa.codigo}</p>
-                            <p className="text-sm text-stone-500">{tropa.productor?.nombre || tropa.usuarioFaena?.nombre}</p>
+                            <p className="text-sm text-stone-500">{tropa.usuarioFaena?.nombre || tropa.productor?.nombre}</p>
                           </div>
                           <div className="text-right">
                             <Badge variant="outline">{tropa.cantidadCabezas} cab.</Badge>
@@ -418,36 +418,36 @@ export function Planilla01Module({ operador }: Props) {
                       <div className="border rounded-lg p-4 bg-white space-y-2">
                         <h4 className="font-semibold text-stone-700 flex items-center gap-2">
                           <User className="w-4 h-4 text-amber-500" />
-                          <TextoEditable id="planilla01-productor-title" original="Productor" tag="span" />
+                          <TextoEditable id="planilla01-productor-title" original="Usuario Faena" tag="span" />
                         </h4>
                         <div className="text-sm space-y-1">
                           <p>
                             <span className="font-medium">
                               <TextoEditable id="planilla01-nombre-label" original="Nombre:" tag="span" />
-                            </span> {tropaSeleccionada.productor?.nombre || '-'}
+                            </span> {tropaSeleccionada.usuarioFaena?.nombre || tropaSeleccionada.productor?.nombre || '-'}
                           </p>
                           <p>
                             <span className="font-medium">
                               <TextoEditable id="planilla01-cuit-label" original="CUIT:" tag="span" />
-                            </span> {tropaSeleccionada.productor?.cuit || '-'}
+                            </span> {tropaSeleccionada.usuarioFaena?.cuit || tropaSeleccionada.productor?.cuit || '-'}
                           </p>
                         </div>
                       </div>
                       <div className="border rounded-lg p-4 bg-white space-y-2">
                         <h4 className="font-semibold text-stone-700 flex items-center gap-2">
                           <User className="w-4 h-4 text-amber-500" />
-                          <TextoEditable id="planilla01-usuario-title" original="Usuario/Matarife" tag="span" />
+                          <TextoEditable id="planilla01-usuario-title" original="Productor / Titular" tag="span" />
                         </h4>
                         <div className="text-sm space-y-1">
                           <p>
                             <span className="font-medium">
                               <TextoEditable id="planilla01-nombre-label2" original="Nombre:" tag="span" />
-                            </span> {tropaSeleccionada.usuarioFaena?.nombre || '-'}
+                            </span> {tropaSeleccionada.productor?.nombre || '-'}
                           </p>
                           <p>
                             <span className="font-medium">
                               <TextoEditable id="planilla01-cuit-label2" original="CUIT:" tag="span" />
-                            </span> {tropaSeleccionada.usuarioFaena?.cuit || '-'}
+                            </span> {tropaSeleccionada.productor?.cuit || '-'}
                           </p>
                         </div>
                       </div>

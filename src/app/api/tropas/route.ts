@@ -7,8 +7,12 @@ import { checkPermission } from '@/lib/auth-helpers'
 const ESTADOS_VALIDOS = Object.values(EstadoTropa)
 
 // API de Tropas - V2: Stock corral, capacidad, DTE/Guía, transacciones
+// Optimizada: paginación + animales solo cuando se piden explícitamente
 
-// GET - Fetch all tropas
+const PAGE_SIZE_DEFAULT = 50
+const PAGE_SIZE_MAX = 200
+
+// GET - Fetch tropas (paginado, sin animales por defecto)
 export async function GET(request: NextRequest) {
   const authError = await checkPermission(request, 'puedeMovimientoHacienda')
   if (authError) return authError
@@ -18,6 +22,9 @@ export async function GET(request: NextRequest) {
     const estadoParam = searchParams.get('estado')
     const especie = searchParams.get('especie')
     const busqueda = searchParams.get('busqueda')?.trim()
+    const includeAnimales = searchParams.get('includeAnimales') === 'true'
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1') || 1)
+    const pageSize = Math.min(PAGE_SIZE_MAX, Math.max(1, parseInt(searchParams.get('limit') || String(PAGE_SIZE_DEFAULT)) || PAGE_SIZE_DEFAULT))
     
     const where: Record<string, unknown> = {}
 
@@ -51,24 +58,34 @@ export async function GET(request: NextRequest) {
       where.especie = especie.toUpperCase()
     }
     
+    // Contar total para paginación
+    const total = await db.tropa.count({ where })
+    const totalPages = Math.ceil(total / pageSize)
+
+    // Include base: solo relaciones ligeras (sin animales)
+    const includeBase: Record<string, unknown> = {
+      productor: { select: { id: true, nombre: true, cuit: true } },
+      usuarioFaena: { select: { id: true, nombre: true, cuit: true, matricula: true } },
+      corral: { select: { id: true, nombre: true } },
+      tiposAnimales: true,
+    }
+
+    // Animales solo si se piden explícitamente
+    if (includeAnimales) {
+      includeBase.animales = { orderBy: { numero: 'asc' } }
+    }
+
     const tropas = await db.tropa.findMany({
       where,
-      include: {
-        productor: true,
-        usuarioFaena: true,
-        corral: true,
-        tiposAnimales: true,
-        animales: {
-          orderBy: { numero: 'asc' }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
+      include: includeBase,
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     })
     
     return NextResponse.json({
       success: true,
+      pagination: { page, pageSize, total, totalPages },
       data: tropas.map(t => ({
         id: t.id,
         numero: t.numero,
@@ -90,20 +107,24 @@ export async function GET(request: NextRequest) {
         guia: t.guia,
         observaciones: t.observaciones,
         tiposAnimales: t.tiposAnimales,
-        animales: t.animales?.map(a => ({
-          id: a.id,
-          numero: a.numero,
-          codigo: a.codigo,
-          tipoAnimal: a.tipoAnimal,
-          caravana: a.caravana,
-          raza: a.raza,
-          pesoVivo: a.pesoVivo,
-          estado: a.estado,
-          corralId: a.corralId,
-          fechaBaja: a.fechaBaja,
-          motivoBaja: a.motivoBaja,
-          pesoBaja: a.pesoBaja
-        }))
+        fechaFaena: t.fechaFaena?.toISOString() || null,
+        kgGancho: t.kgGancho,
+        ...(includeAnimales ? {
+          animales: t.animales?.map(a => ({
+            id: a.id,
+            numero: a.numero,
+            codigo: a.codigo,
+            tipoAnimal: a.tipoAnimal,
+            caravana: a.caravana,
+            raza: a.raza,
+            pesoVivo: a.pesoVivo,
+            estado: a.estado,
+            corralId: a.corralId,
+            fechaBaja: a.fechaBaja,
+            motivoBaja: a.motivoBaja,
+            pesoBaja: a.pesoBaja
+          }))
+        } : {})
       }))
     })
   } catch (error) {

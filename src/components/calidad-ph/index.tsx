@@ -492,7 +492,7 @@ function RegistroPHTab({ operador }: { operador: Operador }) {
               <SelectContent>
                 {tropas.map(t => (
                   <SelectItem key={t.id} value={t.codigo}>
-                    {t.codigo} - {t.productor?.nombre || 'S/Productor'} ({t.cantidadCabezas} cabezas)
+                    {t.codigo} - {t.usuarioFaena?.nombre || t.productor?.nombre || 'S/Usuario'} ({t.cantidadCabezas} cabezas)
                   </SelectItem>
                 ))}
               </SelectContent>
